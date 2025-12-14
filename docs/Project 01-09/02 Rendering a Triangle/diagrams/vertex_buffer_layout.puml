@@ -1,0 +1,117 @@
+@startuml 顶点缓冲区内存布局
+!theme cerulean-outline
+skinparam defaultFontName Microsoft YaHei
+skinparam backgroundColor #FEFEFE
+skinparam componentBackgroundColor #E1F5FE
+
+title 顶点缓冲区内存布局
+
+package "CPU 内存" {
+  rectangle "vertices 数组" as CpuArray {
+    rectangle "顶点0\n(32 bytes)" as V0 #90EE90 {
+      card "pos.x" as V0_px #lightgreen
+      card "pos.y" as V0_py #lightgreen
+      card "pos.z" as V0_pz #lightgreen
+      card "color.r" as V0_cr #lightblue
+      card "color.g" as V0_cg #lightblue
+      card "color.b" as V0_cb #lightblue
+      card "color.a" as V0_ca #lightblue
+    }
+    
+    rectangle "顶点1\n(32 bytes)" as V1 #ADD8E6 {
+      card "pos.x" as V1_px #lightgreen
+      card "pos.y" as V1_py #lightgreen
+      card "pos.z" as V1_pz #lightgreen
+      card "color.r" as V1_cr #lightblue
+      card "color.g" as V1_cg #lightblue
+      card "color.b" as V1_cb #lightblue
+      card "color.a" as V1_ca #lightblue
+    }
+    
+    rectangle "顶点2\n(32 bytes)" as V2 #FFB6C1 {
+      card "pos.x" as V2_px #lightgreen
+      card "pos.y" as V2_py #lightgreen
+      card "pos.z" as V2_pz #lightgreen
+      card "color.r" as V2_cr #lightblue
+      card "color.g" as V2_cg #lightblue
+      card "color.b" as V2_cb #lightblue
+      card "color.a" as V2_ca #lightblue
+    }
+  }
+}
+
+note right of CpuArray
+  **数组初始化：**
+  vertices[0] = { (0.0, 0.5, 0.5), (0,1,0,1) }
+  vertices[1] = { (0.5,-0.5, 0.5), (0,0,1,1) }
+  vertices[2] = {(-0.5,-0.5, 0.5), (1,0,0,1) }
+  
+  总大小: 96 bytes (3 × 32)
+end note
+
+package "GPU 显存" {
+  rectangle "m_pVertexBuffer\nID3D11Buffer" as GpuBuffer #FFA07A {
+    rectangle "顶点0 数据" as GPU_V0 #90EE90
+    rectangle "顶点1 数据" as GPU_V1 #ADD8E6
+    rectangle "顶点2 数据" as GPU_V2 #FFB6C1
+  }
+}
+
+note right of GpuBuffer
+  **缓冲区属性：**
+  • Usage: D3D11_USAGE_IMMUTABLE
+  • BindFlags: D3D11_BIND_VERTEX_BUFFER
+  • ByteWidth: 96 bytes
+  • CPUAccessFlags: 0 (CPU 不可访问)
+end note
+
+CpuArray -down-> GpuBuffer : CreateBuffer()\nD3D11_SUBRESOURCE_DATA
+
+package "输入布局定义" {
+  rectangle "D3D11_INPUT_ELEMENT_DESC" as InputLayout {
+    rectangle "元素0: POSITION" as Elem0 #lightgreen
+    rectangle "元素1: COLOR" as Elem1 #lightblue
+  }
+  
+  note right of Elem0
+    Format: R32G32B32_FLOAT
+    Offset: 0
+    Size: 12 bytes
+  end note
+  
+  note right of Elem1
+    Format: R32G32B32A32_FLOAT
+    Offset: 12
+    Size: 16 bytes
+  end note
+}
+
+note bottom of InputLayout
+  **输入布局作用：**
+  告诉 GPU 如何解释顶点缓冲区中的数据
+  
+  Stride: 32 bytes (每个顶点的大小)
+  Offset: 0 (从缓冲区起始位置读取)
+end note
+
+InputLayout -up-> GpuBuffer : 解释数据格式
+
+rectangle "渲染管线使用" as Pipeline {
+  card "IASetVertexBuffers()" #FFFFE0
+  card "IASetInputLayout()" #FFFFE0
+  card "Draw(3, 0)" #FFFFE0
+}
+
+GpuBuffer -down-> Pipeline
+InputLayout -down-> Pipeline
+
+note bottom of Pipeline
+  **绘制调用：**
+  Draw(顶点数量=3, 起始顶点=0)
+  
+  从 m_pVertexBuffer 读取3个顶点
+  按照 InputLayout 解释数据
+  传递给顶点着色器
+end note
+
+@enduml

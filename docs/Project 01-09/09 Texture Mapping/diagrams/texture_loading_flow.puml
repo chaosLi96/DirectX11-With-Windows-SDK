@@ -1,0 +1,66 @@
+@startuml 纹理加载流程
+skinparam backgroundColor #FEFEFE
+skinparam activityBackgroundColor #E1F5FE
+skinparam activityBorderColor #0277BD
+skinparam activityStartColor #00C853
+skinparam activityEndColor #D32F2F
+skinparam activityBarColor #1976D2
+skinparam defaultFontName Microsoft YaHei
+
+title 纹理加载流程
+
+start
+
+:初始化D3D设备;
+
+partition "加载DDS纹理" {
+    :调用CreateDDSTextureFromFile();
+    note right
+        加载WoodCrate.dds
+        DDS支持多级Mipmap
+        预压缩纹理格式
+    end note
+    
+    :创建ID3D11Texture2D;
+    :创建ID3D11ShaderResourceView;
+    :保存到m_pWoodCrate;
+}
+
+partition "加载BMP序列帧" {
+    :循环i = 1 to 120;
+    
+    repeat
+        :构造文件名\nFire{i:03d}.bmp;
+        :调用CreateWICTextureFromFile();
+        note right
+            WIC支持多种图像格式
+            BMP, PNG, JPG等
+            自动转换为D3D纹理
+        end note
+        :创建ID3D11ShaderResourceView;
+        :添加到m_pFireAnims;
+    repeat while (i < 120)
+}
+
+partition "创建采样器状态" {
+    :配置D3D11_SAMPLER_DESC;
+    note right
+        Filter: MIN_MAG_MIP_LINEAR
+        AddressU/V/W: WRAP
+        MinLOD: 0
+        MaxLOD: D3D11_FLOAT32_MAX
+    end note
+    
+    :调用CreateSamplerState();
+    :保存到m_pSamplerState;
+}
+
+:将纹理和采样器绑定到像素着色器;
+note right
+    PSSetShaderResources(0, 1, &srv)
+    PSSetSamplers(0, 1, &sampler)
+end note
+
+stop
+
+@enduml

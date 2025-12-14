@@ -1,0 +1,80 @@
+@startuml 初始化流程
+skinparam defaultFontName Microsoft YaHei
+
+|GameApp|
+start
+
+:Init();
+note right
+  程序入口点
+end note
+
+:InitEffect();
+note right
+  初始化着色器和输入布局
+end note
+
+partition "InitEffect详细流程" {
+    :加载顶点着色器\n(Cube_VS.cso/hlsl);
+    :CreateVertexShader();
+    :CreateInputLayout()\n基于VS字节码;
+    note right
+      定义2个元素：
+      • POSITION (float3)
+      • COLOR (float4)
+    end note
+    :加载像素着色器\n(Cube_PS.cso/hlsl);
+    :CreatePixelShader();
+}
+
+:InitResource();
+note right
+  创建缓冲区和绑定资源
+end note
+
+partition "InitResource详细流程" {
+    :定义8个立方体顶点\n(VertexPosColor[8]);
+    note right
+      每个顶点包含：
+      • 位置 (-1~1 范围)
+      • 颜色 (RGBA)
+    end note
+    
+    :创建顶点缓冲区\nUsage=IMMUTABLE;
+    :定义36个索引\n(DWORD[36]);
+    note right
+      6个面 × 2个三角形 × 3个顶点
+      复用8个顶点
+    end note
+    
+    :创建索引缓冲区\nUsage=IMMUTABLE;
+    :IASetIndexBuffer();
+    
+    :创建常量缓冲区\nUsage=DYNAMIC;
+    note right
+      **D3D11_USAGE_DYNAMIC**
+      • 允许CPU写入
+      • 每帧更新变换矩阵
+    end note
+    
+    :初始化常量缓冲区\n设置World/View/Proj矩阵;
+    note right
+      • World: 单位矩阵
+      • View: LookAtLH摄像机
+      • Proj: PerspectiveFovLH透视投影
+    end note
+    
+    partition "绑定到渲染管线" {
+        :IASetVertexBuffers();
+        :IASetPrimitiveTopology\n(TRIANGLELIST);
+        :IASetInputLayout();
+        :VSSetShader();
+        :VSSetConstantBuffers(slot=0);
+        :PSSetShader();
+    }
+}
+
+:初始化完成;
+stop
+
+@enduml

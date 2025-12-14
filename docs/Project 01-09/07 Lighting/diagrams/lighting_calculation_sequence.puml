@@ -1,0 +1,69 @@
+@startuml 光照计算序列图
+skinparam defaultFontName "Microsoft YaHei"
+skinparam sequenceMessageAlign center
+
+actor CPU
+participant "Vertex Shader" as VS
+participant "Rasterizer" as Rasterizer
+participant "Pixel Shader" as PS
+
+== 初始化阶段 ==
+CPU -> CPU : 设置光源参数\n(方向光/点光/聚光灯)
+CPU -> CPU : 设置材质参数\n(ambient/diffuse/specular)
+CPU -> CPU : 更新常量缓冲区
+CPU -> VS : 绑定VS常量缓冲区\n(变换矩阵)
+CPU -> PS : 绑定PS常量缓冲区\n(光源+材质)
+
+== 顶点着色阶段 ==
+CPU -> VS : 输入顶点数据\n(位置posL, 法线normalL, 颜色color)
+activate VS
+VS -> VS : 变换到世界空间\nposW = mul(posL, World)
+VS -> VS : 变换法线到世界空间\nnormalW = mul(normalL, WorldInvTranspose)
+VS -> VS : 变换到投影空间\nposH = mul(posW, ViewProj)
+VS -> Rasterizer : 输出\n(posH, posW, normalW, color)
+deactivate VS
+
+== 光栅化阶段 ==
+Rasterizer -> Rasterizer : 插值顶点属性\n(posW, normalW, color)
+note right
+  光栅化器自动对
+  posW、normalW、color
+  进行线性插值
+end note
+
+== 像素着色阶段 ==
+Rasterizer -> PS : 插值后的数据\n(posW, normalW, color)
+activate PS
+
+PS -> PS : 标准化法线\nnormalW = normalize(normalW)
+PS -> PS : 计算视线向量\ntoEye = normalize(eyePos - posW)
+
+group 方向光计算
+  PS -> PS : lightVec = -dirLight.direction
+  PS -> PS : 环境光: ambient = mat.ambient ⊗ light.ambient
+  PS -> PS : 漫反射: diffuse = max(dot(N, L), 0) × ...
+  PS -> PS : 镜面反射: spec = pow(max(dot(R, V), 0), power) × ...
+end
+
+group 点光源计算
+  PS -> PS : lightVec = pointLight.pos - posW
+  PS -> PS : distance = length(lightVec)
+  PS -> PS : 范围判断: if (distance > range) return
+  PS -> PS : 衰减计算: att = 1 / (c0 + c1×d + c2×d²)
+  PS -> PS : 环境光 + 漫反射 + 镜面反射 × att
+end
+
+group 聚光灯计算
+  PS -> PS : lightVec = spotLight.pos - posW
+  PS -> PS : 范围判断
+  PS -> PS : 聚光因子: spot = pow(max(dot(-L, D), 0), spotPower)
+  PS -> PS : 衰减: att = spot / (c0 + c1×d + c2×d²)
+  PS -> PS : 环境光×spot + (漫反射+镜面反射)×att
+end
+
+PS -> PS : 合成最终颜色\nlitColor = (ambient + diffuse) × vColor + spec
+PS -> PS : 设置Alpha通道\nlitColor.a = mat.diffuse.a × vColor.a
+PS -> CPU : 输出最终颜色
+deactivate PS
+
+@enduml

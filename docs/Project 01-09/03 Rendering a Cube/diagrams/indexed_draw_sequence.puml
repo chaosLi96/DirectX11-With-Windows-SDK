@@ -1,0 +1,107 @@
+@startuml 索引绘制流程
+skinparam defaultFontName Microsoft YaHei
+
+participant "CPU\nGameApp" as CPU
+participant "ID3D11DeviceContext" as Context
+participant "输入装配器\nIA Stage" as IA
+participant "顶点着色器\nVertex Shader" as VS
+participant "光栅化器\nRasterizer" as Raster
+participant "像素着色器\nPixel Shader" as PS
+participant "输出合并器\nOutput Merger" as OM
+
+== 每帧更新 ==
+
+CPU -> CPU : UpdateScene(dt)
+activate CPU
+note right
+  更新旋转角度
+  phi += 0.3 * dt
+  theta += 0.37 * dt
+end note
+
+CPU -> CPU : 计算World矩阵\nRotationX(phi) * RotationY(theta)
+
+CPU -> Context : Map(m_pConstantBuffer,\nD3D11_MAP_WRITE_DISCARD)
+activate Context
+Context --> CPU : mappedData.pData
+CPU -> CPU : memcpy(m_CBuffer → GPU)
+CPU -> Context : Unmap(m_pConstantBuffer)
+deactivate Context
+
+deactivate CPU
+
+== 绘制阶段 ==
+
+CPU -> Context : ClearRenderTargetView(black)
+CPU -> Context : ClearDepthStencilView(1.0f, 0)
+
+CPU -> Context : **DrawIndexed(36, 0, 0)**
+activate Context
+note right
+  **参数说明**
+  • IndexCount = 36
+  • StartIndexLocation = 0
+  • BaseVertexLocation = 0
+end note
+
+Context -> IA : 从索引缓冲区读取索引
+activate IA
+note right
+  索引: [0,1,2, 2,3,0, ...]
+  总共36个索引
+end note
+
+loop 对每个顶点
+    IA -> IA : indices[i] → 顶点ID
+    IA -> IA : 从顶点缓冲区获取顶点数据
+    note right
+      根据顶点ID读取：
+      vertices[index].pos
+      vertices[index].color
+    end note
+end
+
+IA -> VS : 发送顶点数据\n(VertexIn: posL, color)
+deactivate IA
+
+activate VS
+VS -> VS : 读取常量缓冲区\n(g_World, g_View, g_Proj)
+VS -> VS : posH = mul(posL, g_World)
+VS -> VS : posH = mul(posH, g_View)
+VS -> VS : posH = mul(posH, g_Proj)
+VS -> Raster : VertexOut\n(posH, color)
+deactivate VS
+
+activate Raster
+note right
+  **光栅化处理**
+  • 组装三角形 (每3个顶点)
+  • 背面剔除
+  • 裁剪
+  • 透视除法 (posH.xyz / posH.w)
+  • 视口变换
+  • 插值顶点属性
+end note
+
+loop 对每个像素
+    Raster -> PS : VertexOut插值\n(posH, 插值color)
+    activate PS
+    PS -> PS : return color
+    PS -> OM : float4 颜色
+    deactivate PS
+    
+    activate OM
+    OM -> OM : 深度测试
+    OM -> OM : 写入渲染目标
+    deactivate OM
+end
+
+deactivate Raster
+deactivate Context
+
+CPU -> Context : Present(0, 0)
+note right
+  呈现到屏幕
+end note
+
+@enduml

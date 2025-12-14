@@ -1,0 +1,98 @@
+@startuml 着色器编译流程
+!theme cerulean-outline
+skinparam defaultFontName Microsoft YaHei
+skinparam backgroundColor #FEFEFE
+skinparam ActivityBackgroundColor #E3F2FD
+skinparam ActivityBorderColor #1976D2
+
+title 着色器编译和加载流程
+
+start
+
+partition "开发时（离线编译）" {
+  :编写 HLSL 着色器代码;
+  note right
+    Triangle_VS.hlsl
+    Triangle_PS.hlsl
+    Triangle.hlsli
+  end note
+  
+  :使用 FXC 或 DXC 编译器;
+  note right
+    fxc /T vs_5_0 /E VS /Fo Triangle_VS.cso Triangle_VS.hlsl
+    fxc /T ps_5_0 /E PS /Fo Triangle_PS.cso Triangle_PS.hlsl
+    
+    参数说明：
+    /T - 着色器类型和版本
+    /E - 入口函数名
+    /Fo - 输出文件名
+  end note
+  
+  :生成编译后的字节码;
+  note right
+    .cso 文件（Compiled Shader Object）
+    包含二进制着色器字节码
+  end note
+}
+
+partition "运行时（加载）" #LightYellow {
+  
+  :调用 CreateShaderFromFile();
+  note right
+    参数：
+    - .cso 文件路径
+    - .hlsl 文件路径（备用）
+    - 入口函数名
+    - 着色器模型
+    - 输出 Blob
+  end note
+  
+  if (.cso 文件存在?) then (是)
+    :从 .cso 加载字节码;
+    note right
+      直接读取编译好的二进制
+      速度快
+    end note
+  else (否)
+    :从 .hlsl 实时编译;
+    note right
+      使用 D3DCompileFromFile()
+      速度较慢，用于开发调试
+    end note
+  endif
+  
+  :字节码存储在 ID3DBlob;
+  
+  fork
+    :CreateVertexShader();
+    note right
+      m_pVertexShader
+      从 blob 创建顶点着色器对象
+    end note
+    
+    :CreateInputLayout();
+    note right
+      m_pVertexLayout
+      基于 VS 字节码签名
+      验证输入布局匹配
+    end note
+  fork again
+    :CreatePixelShader();
+    note right
+      m_pPixelShader
+      从 blob 创建像素着色器对象
+    end note
+  end fork
+  
+  :绑定着色器到管线;
+  note right
+    VSSetShader(m_pVertexShader)
+    PSSetShader(m_pPixelShader)
+  end note
+}
+
+:渲染时 GPU 执行着色器;
+
+stop
+
+@enduml

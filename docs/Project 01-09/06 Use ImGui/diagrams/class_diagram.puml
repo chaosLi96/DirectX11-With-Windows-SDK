@@ -1,0 +1,110 @@
+@startuml 类图
+skinparam defaultFontName Microsoft YaHei
+skinparam classAttributeIconSize 0
+
+skinparam class {
+    BackgroundColor<<struct>> LightYellow
+    BackgroundColor<<library>> LightGreen
+    BackgroundColor<<cbuffer>> LightCyan
+    BorderColor Black
+}
+
+class GameApp {
+    - m_pVertexLayout : ID3D11InputLayout*
+    - m_pVertexBuffer : ID3D11Buffer*
+    - m_pIndexBuffer : ID3D11Buffer*
+    - m_pConstantBuffer : ID3D11Buffer*
+    - m_pVertexShader : ID3D11VertexShader*
+    - m_pPixelShader : ID3D11PixelShader*
+    - m_CBuffer : ConstantBuffer
+    --
+    + UpdateScene(dt : float) : void
+    + DrawScene() : void
+    - InitEffect() : bool
+    - InitResource() : bool
+}
+
+class VertexPosColor <<struct>> {
+    + pos : XMFLOAT3
+    + color : XMFLOAT4
+    + {static} inputLayout : D3D11_INPUT_ELEMENT_DESC[2]
+}
+
+class ConstantBuffer <<struct>> {
+    + world : XMMATRIX
+    + view : XMMATRIX
+    + proj : XMMATRIX
+    + color : XMFLOAT4
+    + useCustomColor : uint32_t
+    + pads : uint32_t[3]
+}
+
+class "ImGui库" as ImGui <<library>> {
+    + Begin(name : const char*) : bool
+    + End() : void
+    + Checkbox(label, value : bool*) : bool
+    + Button(label : const char*) : bool
+    + SliderFloat(label, value : float*, min, max) : bool
+    + ColorEdit3(label, color : float[3]) : bool
+    + Text(fmt, ...) : void
+    + IsMouseDragging(button) : bool
+    + IsAnyItemActive() : bool
+    + GetIO() : ImGuiIO&
+    + Render() : void
+    + ShowDemoWindow() : void
+}
+
+class ImGuiIO <<struct>> {
+    + MouseDelta : ImVec2
+    + MouseWheel : float
+    + KeyCtrl : bool
+    + KeyShift : bool
+}
+
+class "ImGui_ImplDX11" as ImGuiImpl <<library>> {
+    + ImGui_ImplDX11_Init(device, context) : bool
+    + ImGui_ImplDX11_NewFrame() : void
+    + ImGui_ImplDX11_RenderDrawData(data) : void
+    + ImGui_ImplDX11_Shutdown() : void
+}
+
+class "cbuffer ConstantBuffer" as CBuf <<cbuffer>> {
+    + g_World : matrix
+    + g_View : matrix
+    + g_Proj : matrix
+    + g_Color : vector
+    + g_UseCustomColor : uint
+}
+
+GameApp *-- VertexPosColor : 使用
+GameApp *-- ConstantBuffer : 包含
+GameApp ..> ImGui : 调用
+GameApp ..> ImGuiImpl : 渲染
+ImGui ..> ImGuiIO : 提供
+ConstantBuffer ..> CBuf : 映射到GPU
+
+note right of GameApp
+  **新增功能**
+  • ImGui UI 集成
+  • 交互式参数控制
+  • 鼠标拖拽和滚轮操作
+  • 自定义颜色选择
+  • 实时变换调整
+end note
+
+note right of ConstantBuffer
+  **新增字段**
+  • color: 自定义颜色
+  • useCustomColor: 是否使用自定义颜色
+  • pads: 16字节对齐填充
+end note
+
+note bottom of ImGui
+  **ImGui 特点**
+  • 即时模式GUI (Immediate Mode)
+  • 无需状态管理
+  • 易于集成
+  • 跨平台支持
+end note
+
+@enduml

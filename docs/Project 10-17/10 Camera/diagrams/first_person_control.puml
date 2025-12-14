@@ -1,0 +1,92 @@
+@startuml 第一人称摄像机控制流程
+skinparam backgroundColor #FEFEFE
+skinparam activityBackgroundColor #E1F5FE
+skinparam activityBorderColor #0277BD
+skinparam activityStartColor #00C853
+skinparam activityEndColor #D32F2F
+skinparam defaultFontName Microsoft YaHei
+
+title 第一人称摄像机控制流程
+
+start
+
+:UpdateScene(dt);
+
+partition "键盘输入处理" {
+    :检测WASD按键;
+    
+    if (按下W键?) then (是)
+        :d1 += dt;
+    endif
+    
+    if (按下S键?) then (是)
+        :d1 -= dt;
+    endif
+    
+    if (按下A键?) then (是)
+        :d2 -= dt;
+    endif
+    
+    if (按下D键?) then (是)
+        :d2 += dt;
+    endif
+    
+    if (模式 == FirstPerson?) then (是)
+        :Walk(d1 * 6.0f);
+        note right
+            平面移动
+            保持Y坐标不变
+        end note
+    else (Free模式)
+        :MoveForward(d1 * 6.0f);
+        note right
+            朝前向移动
+            可以上下移动
+        end note
+    endif
+    
+    :Strafe(d2 * 6.0f);
+    note right
+        左右平移
+    end note
+}
+
+partition "位置限制" {
+    :获取当前位置;
+    :Clamp到[-8.9, 8.9]x[0.0, 8.9]x[-8.9, 8.9];
+    note right
+        限制在房间内
+        不允许穿地(Y >= 0)
+    end note
+    :SetPosition(adjustedPos);
+    
+    if (模式 == FirstPerson?) then (是)
+        :木箱位置 = 摄像机位置;
+        note right
+            第一人称模式
+            箱子跟随摄像机
+        end note
+    endif
+}
+
+partition "鼠标输入处理" {
+    if (右键拖拽?) then (是)
+        :Pitch(MouseDelta.y * 0.01f);
+        note right
+            上下看
+            旋转X轴
+        end note
+        :RotateY(MouseDelta.x * 0.01f);
+        note right
+            左右看
+            旋转Y轴
+        end note
+    endif
+}
+
+:更新视图矩阵;
+:view = Camera->GetViewXM();
+
+stop
+
+@enduml

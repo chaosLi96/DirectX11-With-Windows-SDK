@@ -1,0 +1,34 @@
+@startuml 透明混合公式
+skinparam defaultFontName Microsoft YaHei
+
+title 透明混合Transparent Blending公式
+
+[源像素Source] as SRC
+[目标像素Dest] as DST
+[混合操作] as OP
+[最终结果] as FINAL
+
+SRC --> OP
+DST --> OP
+OP --> FINAL
+
+note right of OP
+    SrcBlend = SRC_ALPHA
+    DestBlend = INV_SRC_ALPHA
+    BlendOp = ADD
+    
+    FinalColor = a×Src + (1-a)×Dest
+    FinalAlpha = SrcAlpha
+end note
+
+note right of SRC
+    新绘制的像素
+    (R,G,B,a)
+end note
+
+note right of DST
+    帧缓冲中的像素
+    (R,G,B,a)
+end note
+
+@enduml

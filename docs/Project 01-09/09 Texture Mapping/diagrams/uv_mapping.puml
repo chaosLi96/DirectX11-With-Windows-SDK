@@ -1,0 +1,74 @@
+@startuml UV坐标映射
+skinparam backgroundColor #FEFEFE
+skinparam rectangleBackgroundColor #E3F2FD
+skinparam rectangleBorderColor #1565C0
+skinparam noteBackgroundColor #FFF9C4
+skinparam noteBorderColor #F57F17
+skinparam defaultFontName Microsoft YaHei
+
+title UV坐标映射原理
+
+rectangle "3D立方体顶点" as Cube {
+    node "顶点1" as V1 {
+        label "pos: (-1, -1, -1)\nnormal: (0, 0, -1)\n<b>tex: (0, 1)</b>"
+    }
+    
+    node "顶点2" as V2 {
+        label "pos: (-1, +1, -1)\nnormal: (0, 0, -1)\n<b>tex: (0, 0)</b>"
+    }
+    
+    node "顶点3" as V3 {
+        label "pos: (+1, +1, -1)\nnormal: (0, 0, -1)\n<b>tex: (1, 0)</b>"
+    }
+    
+    node "顶点4" as V4 {
+        label "pos: (+1, -1, -1)\nnormal: (0, 0, -1)\n<b>tex: (1, 1)</b>"
+    }
+}
+
+note top of Cube
+    <b>立方体前表面（一个面）</b>
+    UV坐标定义纹理如何映射到表面
+end note
+
+rectangle "纹理空间" as TexSpace {
+    rectangle "纹理图像" as TexImage {
+        label "<b>(0,0)      (1,0)</b>\n  ┌────────────┐\n  │            │\n  │  WoodCrate │\n  │            │\n  └────────────┘\n<b>(0,1)      (1,1)</b>"
+    }
+}
+
+note top of TexSpace
+    <b>纹理坐标系</b>
+    U轴: 左(0) → 右(1)
+    V轴: 上(0) → 下(1)
+    与DirectX屏幕坐标一致
+end note
+
+V2 -down-> TexImage : UV(0,0)\n左上角
+V3 -down-> TexImage : UV(1,0)\n右上角
+V1 -down-> TexImage : UV(0,1)\n左下角
+V4 -down-> TexImage : UV(1,1)\n右下角
+
+note bottom of TexImage
+    <b>插值过程</b>
+    三角形内部的UV坐标通过
+    顶点UV坐标线性插值得到
+    
+    像素着色器接收插值后的UV
+    用于纹理采样
+end note
+
+rectangle "光栅化插值" as Raster {
+    label "<b>三角形内部UV插值</b>\nUV_pixel = \n  u1 * UV_v1 + \n  u2 * UV_v2 + \n  u3 * UV_v3\n\nu1 + u2 + u3 = 1\n(重心坐标)"
+}
+
+Cube --> Raster : 顶点UV
+Raster --> TexImage : 插值后的UV
+
+note bottom of Raster
+    <b>透视校正插值</b>
+    考虑深度进行正确插值
+    防止纹理扭曲
+end note
+
+@enduml

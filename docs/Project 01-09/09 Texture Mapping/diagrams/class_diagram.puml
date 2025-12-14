@@ -1,0 +1,75 @@
+@startuml 类图
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #E8F5E9
+skinparam classBorderColor #2E7D32
+skinparam arrowColor #1976D2
+skinparam defaultFontName Microsoft YaHei
+
+title 纹理映射类图
+
+class D3DApp {
+    # m_pd3dDevice : ID3D11Device*
+    # m_pd3dImmediateContext : ID3D11DeviceContext*
+    # m_pSwapChain : IDXGISwapChain*
+    # m_pRenderTargetView : ID3D11RenderTargetView*
+    # m_pDepthStencilView : ID3D11DepthStencilView*
+    + Init() : bool
+    + OnResize() : void
+    + UpdateScene(dt : float) : void
+    + DrawScene() : void
+}
+
+class GameApp {
+    - m_pVertexLayout2D : ID3D11InputLayout*
+    - m_pVertexLayout3D : ID3D11InputLayout*
+    - m_pVertexBuffer : ID3D11Buffer*
+    - m_pIndexBuffer : ID3D11Buffer*
+    - m_pConstantBuffers[2] : ID3D11Buffer*
+    - m_pWoodCrate : ID3D11ShaderResourceView*
+    - m_pFireAnims : vector<ID3D11ShaderResourceView*>
+    - m_pSamplerState : ID3D11SamplerState*
+    - m_pVertexShader3D : ID3D11VertexShader*
+    - m_pPixelShader3D : ID3D11PixelShader*
+    - m_pVertexShader2D : ID3D11VertexShader*
+    - m_pPixelShader2D : ID3D11PixelShader*
+    - m_CurrMode : ShowMode
+    - m_CurrFrame : int
+    + Init() : bool
+    + OnResize() : void
+    + UpdateScene(dt : float) : void
+    + DrawScene() : void
+    - InitEffect() : bool
+    - InitResource() : bool
+    - ResetMesh<T>(meshData : MeshData<T>) : bool
+}
+
+enum ShowMode {
+    WoodCrate
+    FireAnim
+}
+
+class "VertexPosNormalTex" as Vertex3D {
+    + pos : XMFLOAT3
+    + normal : XMFLOAT3
+    + tex : XMFLOAT2
+    {static} + inputLayout : D3D11_INPUT_ELEMENT_DESC[]
+}
+
+class "VertexPosTex" as Vertex2D {
+    + pos : XMFLOAT3
+    + tex : XMFLOAT2
+    {static} + inputLayout : D3D11_INPUT_ELEMENT_DESC[]
+}
+
+note right of GameApp
+  木盒纹理: WoodCrate.dds
+  火焰动画: 120帧BMP序列帧
+  采样器: MIN_MAG_MIP_LINEAR + WRAP
+end note
+
+D3DApp <|-- GameApp : 继承
+GameApp ..> ShowMode : 使用
+GameApp ..> Vertex3D : 3D模式使用
+GameApp ..> Vertex2D : 2D模式使用
+
+@enduml

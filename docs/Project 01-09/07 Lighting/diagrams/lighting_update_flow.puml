@@ -1,0 +1,75 @@
+@startuml 光照更新和渲染流程
+skinparam defaultFontName "Microsoft YaHei"
+
+start
+
+:每帧调用 UpdateScene(dt);
+
+partition "物体变换" {
+  :更新旋转角度\nphi += 0.3 × dt\ntheta += 0.37 × dt;
+  :计算World矩阵\nWorld = RotX(phi) × RotY(theta);
+  :计算WorldInvTranspose\nWorldInvTranspose = (World⁻¹)ᵀ;
+  :更新VSConstantBuffer\nworld = transpose(World)\nworldInvTranspose = transpose(WorldInvTranspose);
+}
+
+partition "ImGui界面" {
+  if (用户选择几何体？) then (是)
+    :调用 Geometry::CreateXXX();
+    :调用 ResetMesh(meshData);
+    :更新顶点和索引缓冲区;
+  endif
+  
+  if (用户修改材质？) then (是)
+    :更新 m_PSConstantBuffer.material;
+  endif
+  
+  if (用户切换光源类型？) then (是)
+    if (方向光) then (是)
+      :设置 dirLight = m_DirLight\npointLight = 空\nspotLight = 空;
+    elseif (点光源) then (是)
+      :设置 dirLight = 空\npointLight = m_PointLight\nspotLight = 空;
+    else (聚光灯)
+      :设置 dirLight = 空\npointLight = 空\nspotLight = m_SpotLight;
+    endif
+  endif
+  
+  if (用户修改光源参数？) then (是)
+    :更新对应光源的\nambient/diffuse/specular等;
+  endif
+  
+  if (用户切换线框模式？) then (是)
+    :切换光栅化状态\nRSSetState(wireframe/null);
+  endif
+}
+
+partition "更新常量缓冲区" {
+  :Map VS常量缓冲区;
+  :拷贝 VSConstantBuffer 数据;
+  :Unmap VS常量缓冲区;
+  
+  :Map PS常量缓冲区;
+  :拷贝 PSConstantBuffer 数据;
+  :Unmap PS常量缓冲区;
+}
+
+:渲染 ImGui;
+
+:调用 DrawScene();
+
+partition "绘制场景" {
+  :清空渲染目标 (黑色);
+  :清空深度模板缓冲区;
+  :DrawIndexed(m_IndexCount, 0, 0);
+  note right
+    GPU执行：
+    1. VS变换顶点和法线
+    2. 光栅化插值
+    3. PS计算光照
+  end note
+  :渲染 ImGui 界面;
+  :Present() 呈现到屏幕;
+}
+
+stop
+
+@enduml

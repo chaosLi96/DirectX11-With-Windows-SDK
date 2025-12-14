@@ -1,0 +1,47 @@
+@startuml DXGI表面共享机制
+skinparam defaultFontName "Microsoft YaHei"
+
+rectangle "交换链 (IDXGISwapChain)" as SwapChain #LightBlue {
+  rectangle "后台缓冲区\n(ID3D11Texture2D)" as BackBuffer #LightYellow
+}
+
+rectangle "DXGI表面\n(IDXGISurface)" as Surface #LightGreen {
+  note right
+    通过GetBuffer()获取
+    后台缓冲区的DXGI接口
+  end note
+}
+
+rectangle "Direct3D 11" as D3D11 #LightCyan {
+  rectangle "渲染目标视图\n(ID3D11RenderTargetView)" as RTV
+  note bottom of RTV
+    用于3D渲染
+    ClearRenderTargetView()
+    DrawIndexed()
+  end note
+}
+
+rectangle "Direct2D" as D2D #LightPink {
+  rectangle "D2D渲染目标\n(ID2D1RenderTarget)" as D2DRT
+  note bottom of D2DRT
+    用于2D绘制
+    BeginDraw()
+    DrawTextW()
+    EndDraw()
+  end note
+}
+
+SwapChain --> BackBuffer : 包含
+
+BackBuffer -down-> Surface : 实现接口
+BackBuffer -down-> RTV : 创建D3D视图
+Surface -down-> D2DRT : 创建D2D渲染目标
+
+note bottom of Surface
+  **关键：同一个后台缓冲区**
+  - 既是D3D11纹理
+  - 又是DXGI表面
+  - 可以同时用于D3D和D2D
+end note
+
+@enduml

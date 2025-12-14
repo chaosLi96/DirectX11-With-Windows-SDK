@@ -1,0 +1,131 @@
+@startuml 三种光源类型对比
+skinparam defaultFontName "Microsoft YaHei"
+
+!define RECTANGLE class
+
+RECTANGLE "方向光\nDirectional Light" as DirLight #LightBlue {
+  **特性：**
+  - 无位置，只有方向
+  - 光线平行
+  - 无衰减
+  
+  **参数：**
+  • direction: 光照方向
+  • ambient: 环境光颜色
+  • diffuse: 漫反射颜色
+  • specular: 镜面反射颜色
+  
+  **应用场景：**
+  • 太阳光
+  • 月光
+  • 远距离光源
+  
+  **计算公式：**
+  lightVec = -direction
+  (无衰减计算)
+}
+
+RECTANGLE "点光源\nPoint Light" as PointLight #LightYellow {
+  **特性：**
+  - 有位置
+  - 向四面八方发光
+  - 随距离衰减
+  
+  **参数：**
+  • position: 光源位置
+  • range: 照射范围
+  • att (c0, c1, c2): 衰减系数
+  • ambient, diffuse, specular
+  
+  **应用场景：**
+  • 灯泡
+  • 火把
+  • 蜡烛
+  
+  **计算公式：**
+  lightVec = position - surfacePos
+  d = length(lightVec)
+  if (d > range) return
+  att = 1 / (c0 + c1×d + c2×d²)
+}
+
+RECTANGLE "聚光灯\nSpot Light" as SpotLight #LightPink {
+  **特性：**
+  - 有位置和方向
+  - 锥形照射区域
+  - 随距离和角度衰减
+  
+  **参数：**
+  • position: 光源位置
+  • direction: 照射方向
+  • range: 照射范围
+  • spot: 聚光指数
+  • att (c0, c1, c2): 衰减系数
+  • ambient, diffuse, specular
+  
+  **应用场景：**
+  • 手电筒
+  • 舞台灯光
+  • 车灯
+  
+  **计算公式：**
+  lightVec = position - surfacePos
+  d = length(lightVec)
+  spotFactor = pow(max(dot(-L, D), 0), spot)
+  att = spotFactor / (c0 + c1×d + c2×d²)
+  ambient *= spotFactor
+}
+
+note bottom of DirLight
+  **示例：**
+  direction = (0, -1, 0)  // 从上往下照
+  diffuse = (1, 1, 1, 1)  // 白光
+  
+  **优点：**
+  - 计算最简单
+  - 性能最好
+  
+  **缺点：**
+  - 无法模拟近距离光源
+end note
+
+note bottom of PointLight
+  **示例：**
+  position = (0, 10, 0)   // 位于上方10单位
+  range = 50.0            // 照射半径50单位
+  att = (1, 0.1, 0.01)    // 衰减系数
+  
+  **衰减解释：**
+  c0: 常数衰减（通常为1）
+  c1: 线性衰减
+  c2: 二次衰减（符合物理规律）
+  
+  **优点：**
+  - 真实感强
+  - 适合室内场景
+  
+  **缺点：**
+  - 需要距离计算
+end note
+
+note bottom of SpotLight
+  **示例：**
+  position = (0, 10, 0)
+  direction = (0, -1, 0)  // 向下照
+  spot = 8.0              // 聚光锐度
+  range = 50.0
+  
+  **聚光因子解释：**
+  spotFactor越大，光锥越窄
+  spotFactor = 1: 广角
+  spotFactor = 64: 窄光束
+  
+  **优点：**
+  - 最真实
+  - 效果最丰富
+  
+  **缺点：**
+  - 计算最复杂
+end note
+
+@enduml

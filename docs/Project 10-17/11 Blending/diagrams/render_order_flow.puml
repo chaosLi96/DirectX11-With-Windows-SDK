@@ -1,0 +1,72 @@
+@startuml 渲染顺序流程
+!define DARKBLUE #1E3A5F
+!define LIGHTBLUE #4A90E2
+!define GREEN #2ECC71
+!define ORANGE #E67E22
+
+skinparam defaultFontName Microsoft YaHei
+skinparam activityBackgroundColor LIGHTBLUE
+skinparam activityBorderColor DARKBLUE
+skinparam activityDiamondBackgroundColor ORANGE
+skinparam activityStartColor GREEN
+
+title 透明渲染顺序流程
+
+start
+
+:清除渲染目标和深度/模板缓冲区;
+
+partition "第一阶段：不透明物体" #LightGreen {
+    :设置光栅化状态: RSSetState(nullptr);
+    note right: 默认背面剔除
+    
+    :设置混合状态: OMSetBlendState(nullptr);
+    note right: 禁用混合
+    
+    :绘制墙壁 m_Walls[0-3];
+    
+    :绘制地板 m_Floor;
+    
+    note right
+        **不透明物体特点：**
+        - Alpha = 1.0
+        - 写入深度缓冲区
+        - 无需排序
+        - 性能最优
+    end note
+}
+
+partition "第二阶段：透明物体" #LightCoral {
+    :设置光栅化状态: RSNoCull;
+    note right: 禁用背面剔除（双面渲染）
+    
+    :设置混合状态: BSTransparent;
+    note right
+        SrcBlend = SRC_ALPHA
+        DestBlend = INV_SRC_ALPHA
+    end note
+    
+    :提升篱笆盒高度 Y=0.01;
+    
+    :绘制篱笆盒(+2.0, 0.01, 0.0);
+    
+    :绘制篱笆盒(-2.0, 0.01, 0.0);
+    
+    :绘制水面 m_Water;
+    
+    note right
+        **透明物体特点：**
+        - 0 < Alpha < 1.0
+        - 后绘制覆盖前绘制
+        - 需要从后往前排序
+        - 禁用背面剔除
+    end note
+}
+
+:渲染ImGui界面;
+
+:Present交换缓冲区;
+
+stop
+
+@enduml

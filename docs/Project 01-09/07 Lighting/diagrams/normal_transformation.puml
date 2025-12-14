@@ -1,0 +1,50 @@
+@startuml 法线变换原理
+skinparam defaultFontName "Microsoft YaHei"
+
+package "局部空间 (Local Space)" {
+  component [顶点 P\n法线 N] as LocalVertex
+  note bottom of LocalVertex
+    法线垂直于表面
+  end note
+}
+
+package "世界空间 (World Space)" {
+  component [顶点 P'\n法线 N'] as WorldVertex
+}
+
+LocalVertex -right-> WorldVertex : 变换
+
+note on link
+  **错误做法：**
+  P' = P × World
+  N' = N × World  ❌
+  
+  **正确做法：**
+  P' = P × World  ✓
+  N' = N × WorldInvTranspose  ✓
+end note
+
+rectangle "为什么需要逆转置矩阵？" as Why #WhiteSmoke {
+  rectangle "问题：非均匀缩放" as Problem #LightYellow
+  rectangle "假设沿X轴缩放2倍，Y轴缩放1倍\n如果直接用World矩阵变换法线\n法线将不再垂直于表面" as Issue
+  rectangle "解决方案：逆转置矩阵" as Solution #LightGreen
+  rectangle "数学证明：\n设切线向量 T，法线向量 N\n满足 T · N = 0 (垂直)\n\n变换后：\nT' = T × M\nN' = N × (M⁻¹)ᵀ\n\n验证垂直性：\nT' · N' = (T × M) · (N × (M⁻¹)ᵀ)\n        = T · (M × (M⁻¹)ᵀ) · N\n        = T · I · N = T · N = 0  ✓" as Proof
+  
+  Problem --> Issue
+  Issue --> Solution
+  Solution --> Proof
+}
+
+note right of Why
+  **WorldInvTranspose = (World⁻¹)ᵀ**
+  
+  步骤：
+  1. 对World矩阵求逆 → World⁻¹
+  2. 对逆矩阵转置 → (World⁻¹)ᵀ
+  
+  特殊情况：
+  - 如果只有旋转和平移 → World = WorldInvTranspose
+  - 如果有非均匀缩放 → 必须使用逆转置
+end note
+
+@enduml

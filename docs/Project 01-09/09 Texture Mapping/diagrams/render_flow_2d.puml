@@ -1,0 +1,100 @@
+@startuml 2D动画渲染流程
+skinparam backgroundColor #FEFEFE
+skinparam participantBackgroundColor #FCE4EC
+skinparam participantBorderColor #C2185B
+skinparam sequenceArrowColor #1976D2
+skinparam sequenceLifeLineBorderColor #00796B
+skinparam defaultFontName Microsoft YaHei
+
+title 2D动画渲染流程（火焰）
+
+participant "GameApp" as App
+participant "2D矩形" as Mesh
+participant "顶点着色器" as VS
+participant "像素着色器" as PS
+participant "动画纹理\n(120帧)" as Anim
+
+App -> App : UpdateScene()
+activate App
+
+note right of App
+    <b>帧率控制</b>
+    限制60FPS
+    totDeltaTime += dt
+    if (totDeltaTime > 1.0/60)
+        m_CurrFrame++
+end note
+
+App -> App : 累计时间 += dt
+alt 达到1/60秒
+    App -> App : m_CurrFrame = (m_CurrFrame + 1) % 120
+    App -> Anim : PSSetShaderResources(0, m_pFireAnims[m_CurrFrame])
+    activate Anim
+    Anim --> App : 绑定当前帧纹理
+    deactivate Anim
+end
+
+deactivate App
+
+App -> App : DrawScene()
+activate App
+
+App -> Mesh : 设置2D矩形网格
+activate Mesh
+Mesh -> Mesh : IASetVertexBuffers()
+Mesh -> Mesh : IASetIndexBuffer()
+Mesh -> Mesh : IASetInputLayout(2D)
+note right
+    顶点格式: VertexPosTex
+    只包含位置和纹理坐标
+    不包含法线（不需要光照）
+end note
+deactivate Mesh
+
+App -> VS : 设置2D顶点着色器
+activate VS
+VS -> VS : VSSetShader(2D)
+note right
+    <b>简单的直通着色器</b>
+    vOut.posH = float4(vIn.posL, 1.0f)
+    vOut.tex = vIn.tex
+    不进行任何变换
+end note
+deactivate VS
+
+App -> PS : 设置2D像素着色器
+activate PS
+PS -> PS : PSSetShader(2D)
+PS -> Anim : 已绑定当前帧纹理
+deactivate PS
+
+App -> App : DrawIndexed()
+activate App
+
+loop 每个像素
+    PS -> Anim : Sample(sampler, tex)
+    activate Anim
+    note right
+        <b>纯纹理采样</b>
+        return g_Tex.Sample(g_SamLinear, pIn.tex)
+        无光照计算
+    end note
+    Anim --> PS : 返回纹理颜色
+    deactivate Anim
+    PS --> App : 最终颜色
+end
+
+deactivate App
+
+App -> App : Present()
+
+deactivate App
+
+note right of App
+    动画原理：
+    快速切换120帧纹理
+    形成连续火焰动画
+    类似传统2D帧动画
+end note
+
+@enduml

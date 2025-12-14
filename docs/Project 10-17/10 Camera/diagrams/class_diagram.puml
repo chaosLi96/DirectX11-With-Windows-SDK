@@ -1,0 +1,109 @@
+@startuml 摄像机类图
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #E8F5E9
+skinparam classBorderColor #2E7D32
+skinparam arrowColor #1976D2
+skinparam defaultFontName Microsoft YaHei
+
+title 摄像机系统类图
+
+abstract class Camera {
+    # m_Transform : Transform
+    # m_NearZ : float
+    # m_FarZ : float
+    # m_Aspect : float
+    # m_FovY : float
+    # m_ViewPort : D3D11_VIEWPORT
+    + GetPositionXM() : XMVECTOR
+    + GetPosition() : XMFLOAT3
+    + GetRotationX() : float
+    + GetRotationY() : float
+    + GetRightAxisXM() : XMVECTOR
+    + GetUpAxisXM() : XMVECTOR
+    + GetLookAxisXM() : XMVECTOR
+    + GetViewXM() : XMMATRIX
+    + GetProjXM() : XMMATRIX
+    + GetViewProjXM() : XMMATRIX
+    + SetFrustum(fovY, aspect, nearZ, farZ)
+    + SetViewPort(viewport)
+}
+
+class FirstPersonCamera {
+    + SetPosition(x, y, z)
+    + LookAt(pos, target, up)
+    + LookTo(pos, to, up)
+    + Strafe(d) : void
+    + Walk(d) : void
+    + MoveForward(d) : void
+    + Pitch(rad) : void
+    + RotateY(rad) : void
+}
+
+class ThirdPersonCamera {
+    - m_Target : XMFLOAT3
+    - m_Distance : float
+    - m_MinDist : float
+    - m_MaxDist : float
+    + GetTargetPosition() : XMFLOAT3
+    + GetDistance() : float
+    + RotateX(rad) : void
+    + RotateY(rad) : void
+    + Approach(dist) : void
+    + SetTarget(target) : void
+    + SetDistance(dist) : void
+    + SetDistanceMinMax(minDist, maxDist)
+}
+
+class Transform {
+    - m_Position : XMFLOAT3
+    - m_Rotation : XMFLOAT3
+    - m_Scale : XMFLOAT3
+    + GetLocalToWorldMatrixXM() : XMMATRIX
+    + SetPosition(pos)
+    + SetRotation(pitch, yaw, roll)
+}
+
+enum CameraMode {
+    FirstPerson
+    ThirdPerson
+    Free
+}
+
+class GameApp {
+    - m_pCamera : shared_ptr<Camera>
+    - m_CameraMode : CameraMode
+    - m_WoodCrate : GameObject
+    - m_Floor : GameObject
+    - m_Walls : vector<GameObject>
+    + UpdateScene(dt)
+}
+
+Camera <|-- FirstPersonCamera : 继承
+Camera <|-- ThirdPersonCamera : 继承
+Camera *-- Transform : 组合
+GameApp ..> Camera : 使用
+GameApp ..> CameraMode : 使用
+GameApp --> FirstPersonCamera : 创建
+GameApp --> ThirdPersonCamera : 创建
+
+note top of Camera
+  抽象基类
+  封装通用摄像机功能
+  视图矩阵、投影矩阵
+end note
+
+note right of FirstPersonCamera
+  第一人称摄像机
+  WASD移动
+  鼠标控制视角
+  Free模式可穿墙
+end note
+
+note right of ThirdPersonCamera
+  第三人称摄像机
+  围绕目标旋转
+  鼠标滚轮控制距离
+  跟随物体移动
+end note
+
+@enduml

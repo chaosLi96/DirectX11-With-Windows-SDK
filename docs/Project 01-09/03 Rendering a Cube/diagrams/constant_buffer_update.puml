@@ -1,0 +1,58 @@
+@startuml 常量缓冲区更新机制
+skinparam defaultFontName Microsoft YaHei
+
+|CPU|
+start
+
+:计算新的变换矩阵;
+note right
+  m_CBuffer.world = 
+  XMMatrixRotationX(phi) * 
+  XMMatrixRotationY(theta)
+end note
+
+:调用 Map()\nD3D11_MAP_WRITE_DISCARD;
+note right
+  **D3D11_MAP_WRITE_DISCARD**
+  • 丢弃旧内容
+  • 获得新的内存块
+  • 避免GPU/CPU同步等待
+end note
+
+|GPU|
+:GPU继续使用旧缓冲区\n处理之前的绘制命令;
+
+|CPU|
+:获得 mappedData.pData\n(可写内存指针);
+
+:memcpy_s(\n  目标: mappedData.pData,\n  源: &m_CBuffer,\n  大小: sizeof(ConstantBuffer)\n);
+
+note right
+  **拷贝内容**
+  • world 矩阵 (4x4 float)
+  • view 矩阵 (4x4 float)
+  • proj 矩阵 (4x4 float)
+  总共 192 字节
+end note
+
+:调用 Unmap();
+note right
+  解除映射，提交数据
+  GPU可以使用新缓冲区
+end note
+
+|GPU|
+:在下一次DrawIndexed时\n使用更新后的常量缓冲区;
+
+note right
+  **为什么需要转置矩阵？**
+  • HLSL 默认使用列主矩阵 (column-major)
+  • DirectXMath 使用行主矩阵 (row-major)
+  • 需要在 CPU 端转置后再传递给 GPU
+  • XMMatrixTranspose() 执行转置操作
+end note
+
+|CPU|
+stop
+
+@enduml

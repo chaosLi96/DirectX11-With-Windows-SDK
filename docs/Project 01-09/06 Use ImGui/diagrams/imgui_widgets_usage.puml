@@ -1,0 +1,115 @@
+@startuml ImGui控件使用示例
+skinparam defaultFontName Microsoft YaHei
+
+start
+
+:static float value = 0.5f;
+note right: 使用static保持状态
+
+if (ImGui::Begin("Window Name")) then (true)
+    
+    :创建复选框;
+    note right
+      bool checked = true;
+      ImGui::Checkbox("Enable", &checked);
+      // 直接修改checked变量
+    end note
+    
+    :创建按钮;
+    note right
+      if (ImGui::Button("Reset"))
+      {
+          // 按钮被点击时执行
+          ResetParameters();
+      }
+    end note
+    
+    :创建滑块;
+    note right
+      float scale = 1.0f;
+      ImGui::SliderFloat(
+          "Scale",    // 标签
+          &scale,     // 值指针
+          0.2f,       // 最小值
+          2.0f        // 最大值
+      );
+    end note
+    
+    :创建文本显示;
+    note right
+      ImGui::Text("FPS: %.1f", fps);
+      // 类似printf格式化
+    end note
+    
+    :创建颜色选择器;
+    note right
+      float color[3] = {1.0f, 0.0f, 0.0f};
+      ImGui::ColorEdit3("Color", color);
+      // RGB颜色选择器
+    end note
+    
+    :创建输入框;
+    note right
+      char buffer[256] = "text";
+      ImGui::InputText("Name", buffer, 256);
+    end note
+    
+    :创建下拉框;
+    note right
+      const char* items[] = {"A", "B", "C"};
+      static int current = 0;
+      ImGui::Combo("Select", &current, 
+                   items, IM_ARRAYSIZE(items));
+    end note
+    
+    :同一行放置多个控件;
+    note right
+      ImGui::Text("Label:");
+      ImGui::SameLine();
+      ImGui::Button("Action");
+    end note
+    
+    partition "条件控件" {
+        if (ImGui::TreeNode("Advanced")) then (展开)
+            :显示高级选项;
+            :ImGui::TreePop();
+        endif
+        
+        if (ImGui::CollapsingHeader("Section")) then (展开)
+            :显示折叠内容;
+        endif
+    }
+    
+    :ImGui::End();
+    
+else (false)
+    :窗口被关闭;
+endif
+
+:获取输入状态;
+note right
+  ImGuiIO& io = ImGui::GetIO();
+  
+  // 鼠标状态
+  if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+  {
+      float dx = io.MouseDelta.x;
+      float dy = io.MouseDelta.y;
+  }
+  
+  // 滚轮
+  if (io.MouseWheel != 0.0f)
+  {
+      Zoom(io.MouseWheel);
+  }
+  
+  // 检测UI是否激活
+  if (!ImGui::IsAnyItemActive())
+  {
+      // 可以处理场景交互
+  }
+end note
+
+stop
+
+@enduml

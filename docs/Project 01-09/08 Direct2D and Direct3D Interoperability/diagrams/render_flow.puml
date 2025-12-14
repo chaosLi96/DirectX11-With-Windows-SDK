@@ -1,0 +1,44 @@
+@startuml 渲染流程
+skinparam defaultFontName "Microsoft YaHei"
+
+participant CPU
+participant "Direct3D" as D3D
+participant "Direct2D" as D2D
+participant "SwapChain" as SC
+
+== 每帧渲染 ==
+CPU -> D3D : ClearRenderTargetView()\n清空后台缓冲区
+CPU -> D3D : ClearDepthStencilView()\n清空深度模板缓冲区
+
+group 3D场景渲染
+  CPU -> D3D : VSSetShader()\n设置顶点着色器
+  CPU -> D3D : PSSetShader()\n设置像素着色器
+  CPU -> D3D : VSSetConstantBuffers()\n绑定VS常量缓冲区
+  CPU -> D3D : PSSetConstantBuffers()\n绑定PS常量缓冲区
+  CPU -> D3D : IASetVertexBuffers()\n设置顶点缓冲区
+  CPU -> D3D : IASetIndexBuffer()\n设置索引缓冲区
+  CPU -> D3D : DrawIndexed()\n绘制3D几何体
+  note right
+    3D渲染到
+    后台缓冲区
+  end note
+end
+
+group 2D文本和图形渲染
+  CPU -> D2D : BeginDraw()\n开始2D绘制
+  note right
+    D2D渲染目标
+    指向同一个
+    后台缓冲区
+  end note
+  CPU -> D2D : DrawTextW()\n绘制文本信息
+  CPU -> D2D : EndDraw()\n结束2D绘制
+  note right
+    2D内容叠加在
+    3D场景之上
+  end note
+end
+
+CPU -> SC : Present()\n呈现后台缓冲区
+
+@enduml

@@ -1,0 +1,77 @@
+@startuml 混合状态架构
+!define DARKBLUE #1E3A5F
+!define LIGHTBLUE #4A90E2
+!define GREEN #2ECC71
+!define ORANGE #E67E22
+
+skinparam defaultFontName Microsoft YaHei
+skinparam BackgroundColor white
+skinparam classBackgroundColor LIGHTBLUE
+skinparam classBorderColor DARKBLUE
+
+title DirectX11 混合状态(Blend State)架构
+
+package "D3D11 Blend State" {
+    class ID3D11BlendState {
+        + 描述混合操作
+        + 不可变对象
+    }
+    
+    class D3D11_BLEND_DESC {
+        + AlphaToCoverageEnable : BOOL
+        + IndependentBlendEnable : BOOL
+        + RenderTarget[8] : D3D11_RENDER_TARGET_BLEND_DESC
+        --
+        多渲染目标支持
+    }
+    
+    class D3D11_RENDER_TARGET_BLEND_DESC {
+        + BlendEnable : BOOL
+        + SrcBlend : D3D11_BLEND
+        + DestBlend : D3D11_BLEND
+        + BlendOp : D3D11_BLEND_OP
+        + SrcBlendAlpha : D3D11_BLEND
+        + DestBlendAlpha : D3D11_BLEND
+        + BlendOpAlpha : D3D11_BLEND_OP
+        + RenderTargetWriteMask : UINT8
+        --
+        定义RGB和Alpha独立混合
+    }
+    
+    ID3D11BlendState ..> D3D11_BLEND_DESC : 由...创建
+    D3D11_BLEND_DESC *-- "8" D3D11_RENDER_TARGET_BLEND_DESC : 包含
+}
+
+package "RenderStates封装" {
+    class RenderStates <<static>> {
+        + {static} BSTransparent : ID3D11BlendState
+        + {static} BSAlphaToCoverage : ID3D11BlendState
+        + {static} BSAdditive : ID3D11BlendState
+        + {static} BSNoColorWrite : ID3D11BlendState
+        + {static} RSNoCull : ID3D11RasterizerState
+        --
+        + {static} InitAll(device)
+    }
+}
+
+package "GameApp应用" {
+    class GameApp {
+        - m_Floor : GameObject
+        - m_Walls : GameObject[]
+        - m_WireFence : GameObject
+        - m_Water : GameObject
+        --
+        + DrawScene()
+    }
+    
+    note right of GameApp::DrawScene
+        **渲染顺序：**
+        1. 不透明物体(墙、地板)
+        2. 透明物体(篱笆、水面)
+    end note
+}
+
+RenderStates ..> ID3D11BlendState : 持有
+GameApp ..> RenderStates : 使用
+
+@enduml

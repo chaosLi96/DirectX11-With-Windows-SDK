@@ -1,0 +1,68 @@
+@startuml 视图矩阵构建流程
+skinparam backgroundColor #FEFEFE
+skinparam rectangleBackgroundColor #FFF3E0
+skinparam rectangleBorderColor #EF6C00
+skinparam noteBackgroundColor #E8F5E9
+skinparam noteBorderColor #2E7D32
+skinparam defaultFontName Microsoft YaHei
+
+title 视图矩阵构建流程
+
+rectangle "Transform组件" as Transform {
+    rectangle "位置(Position)" as Pos {
+        label "m_Position\n(x, y, z)"
+    }
+    
+    rectangle "旋转(Rotation)" as Rot {
+        label "m_Rotation\n(pitch, yaw, roll)"
+    }
+}
+
+rectangle "摄像机坐标系" as CameraSpace {
+    rectangle "Right轴(X)" as Right {
+        label "(rx, ry, rz)"
+    }
+    
+    rectangle "Up轴(Y)" as Up {
+        label "(ux, uy, uz)"
+    }
+    
+    rectangle "Look轴(Z)" as Look {
+        label "(lx, ly, lz)"
+    }
+}
+
+rectangle "视图矩阵" as ViewMatrix {
+    label "View Matrix\n[rx  ux  lx  0]\n[ry  uy  ly  0]\n[rz  uz  lz  0]\n[-dot(R,P) -dot(U,P) -dot(L,P) 1]"
+}
+
+note top of Transform
+    存储摄像机的
+    世界空间变换
+end note
+
+Rot --> CameraSpace : 构建坐标轴
+note on link
+    Right = (1, 0, 0) * RotationMatrix
+    Up = (0, 1, 0) * RotationMatrix
+    Look = (0, 0, 1) * RotationMatrix
+end note
+
+Pos --> ViewMatrix : 计算平移
+CameraSpace --> ViewMatrix : 构建旋转部分
+
+note bottom of ViewMatrix
+    视图矩阵 = 世界到摄像机空间的变换
+    View = Inverse(CameraWorldMatrix)
+    
+    旋转部分: 坐标轴转置
+    平移部分: -dot(Axis, Position)
+end note
+
+rectangle "应用示例" as Example {
+    label "顶点变换\nposView = mul(posWorld, View)\nposProj = mul(posView, Proj)"
+}
+
+ViewMatrix --> Example
+
+@enduml

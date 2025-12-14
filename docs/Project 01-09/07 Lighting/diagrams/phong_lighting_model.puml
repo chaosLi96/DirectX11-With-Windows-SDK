@@ -1,0 +1,60 @@
+@startuml Phong光照模型
+skinparam defaultFontName "Microsoft YaHei"
+
+state "Phong光照模型" as Phong #LightBlue {
+  
+  state "环境光 (Ambient)" as Ambient #PaleGreen {
+    state "**计算公式:**\nAmbient = Material.ambient ⊗ Light.ambient" as AmbientFormula
+  }
+  
+  state "漫反射 (Diffuse)" as Diffuse #LightYellow {
+    state "**计算公式:**\ndiffuseFactor = max(dot(N, L), 0)\nDiffuse = diffuseFactor × Material.diffuse ⊗ Light.diffuse" as DiffuseFormula
+    state "**关键参数:**\nN: 法线向量\nL: 光照方向" as DiffuseParams
+    DiffuseFormula --> DiffuseParams
+  }
+  
+  state "镜面反射 (Specular)" as Specular #LightPink {
+    state "**计算公式:**\nR = reflect(-L, N)\nspecFactor = pow(max(dot(R, V), 0), specPower)\nSpecular = specFactor × Material.specular ⊗ Light.specular" as SpecFormula
+    state "**关键参数:**\nR: 反射向量\nV: 视线方向\nspecPower: 镜面反射指数" as SpecParams
+    SpecFormula --> SpecParams
+  }
+  
+  state "最终颜色" as Final #LightCyan {
+    state "**计算公式:**\nFinalColor = (Ambient + Diffuse) × VertexColor + Specular\nFinalColor.a = Material.diffuse.a × VertexColor.a" as FinalFormula
+  }
+  
+}
+
+[*] --> Ambient : 始终存在
+Ambient --> Diffuse : 计算漫反射
+Diffuse --> Specular : 计算镜面反射
+Specular --> Final : 合成最终颜色
+Final --> [*]
+
+note right of Ambient
+  环境光：
+  - 模拟间接照明
+  - 与角度无关
+  - 防止完全黑暗
+end note
+
+note right of Diffuse
+  漫反射：
+  - 模拟粗糙表面
+  - 与光照角度相关
+  - 服从Lambert定律
+end note
+
+note right of Specular
+  镜面反射：
+  - 模拟光滑表面
+  - 与视角和光角相关
+  - 产生高光效果
+end note
+
+note bottom of Final
+  **⊗ 表示逐分量相乘**
+  (r1, g1, b1) ⊗ (r2, g2, b2) = (r1×r2, g1×g2, b1×b2)
+end note
+
+@enduml

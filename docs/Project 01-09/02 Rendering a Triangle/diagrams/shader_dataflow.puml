@@ -1,0 +1,137 @@
+@startuml 着色器数据流
+!theme cerulean-outline
+skinparam defaultFontName Microsoft YaHei
+skinparam backgroundColor #FEFEFE
+skinparam sequenceBoxBackgroundColor #E8EAF6
+
+title 着色器数据流转 - 从顶点到像素
+
+participant "顶点缓冲区" as VB
+participant "输入装配器\n(IA)" as IA
+participant "顶点着色器\n(VS)" as VS
+participant "光栅化器\n(Rasterizer)" as RS
+participant "像素着色器\n(PS)" as PS
+participant "渲染目标" as RT
+
+== 第1个顶点 ==
+
+VB -> IA : 读取顶点0
+note right
+  pos = (0.0, 0.5, 0.5)
+  color = (0.0, 1.0, 0.0, 1.0)
+  绿色
+end note
+
+IA -> VS : VertexIn
+note right
+  float3 pos : POSITION
+  float4 color : COLOR
+end note
+
+VS -> VS : 执行 VS()
+note right
+  vOut.posH = float4(vIn.pos, 1.0f)
+  = (0.0, 0.5, 0.5, 1.0)
+  
+  vOut.color = vIn.color
+  = (0.0, 1.0, 0.0, 1.0)
+end note
+
+VS -> RS : VertexOut (顶点0)
+note right
+  float4 posH : SV_POSITION
+  float4 color : COLOR
+end note
+
+== 第2个顶点 ==
+
+VB -> IA : 读取顶点1
+note right
+  pos = (0.5, -0.5, 0.5)
+  color = (0.0, 0.0, 1.0, 1.0)
+  蓝色
+end note
+
+IA -> VS : VertexIn
+VS -> VS : 执行 VS()
+note right
+  vOut.posH = (0.5, -0.5, 0.5, 1.0)
+  vOut.color = (0.0, 0.0, 1.0, 1.0)
+end note
+
+VS -> RS : VertexOut (顶点1)
+
+== 第3个顶点 ==
+
+VB -> IA : 读取顶点2
+note right
+  pos = (-0.5, -0.5, 0.5)
+  color = (1.0, 0.0, 0.0, 1.0)
+  红色
+end note
+
+IA -> VS : VertexIn
+VS -> VS : 执行 VS()
+note right
+  vOut.posH = (-0.5, -0.5, 0.5, 1.0)
+  vOut.color = (1.0, 0.0, 0.0, 1.0)
+end note
+
+VS -> RS : VertexOut (顶点2)
+
+== 光栅化阶段 ==
+
+RS -> RS : 组装三角形
+note right
+  3个顶点形成1个三角形
+end note
+
+RS -> RS : 视口变换
+note right
+  NDC 坐标 -> 屏幕坐标
+end note
+
+RS -> RS : 三角形扫描
+note right
+  确定覆盖的像素
+  生成像素片段
+end note
+
+loop 对每个像素片段
+  RS -> RS : 属性插值
+  note right
+    根据像素位置
+    插值顶点颜色
+    
+    示例：三角形中心
+    color ≈ (0.33, 0.33, 0.33, 1.0)
+    (混合三种颜色)
+  end note
+  
+  RS -> PS : VertexOut (插值后)
+  note right
+    posH: 片段屏幕位置
+    color: 插值后的颜色
+  end note
+  
+  PS -> PS : 执行 PS()
+  note right
+    return pIn.color;
+    直接返回插值颜色
+  end note
+  
+  PS -> RT : float4 最终颜色
+  note right
+    SV_Target 语义
+    写入渲染目标
+  end note
+end
+
+note over RT
+  **最终效果：**
+  三角形中心呈现混合色
+  边缘保持原始顶点颜色
+  颜色平滑过渡
+end note
+
+@enduml

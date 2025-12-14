@@ -1,0 +1,104 @@
+@startuml 纹理采样器工作原理
+skinparam backgroundColor #FEFEFE
+skinparam componentBackgroundColor #FFF3E0
+skinparam componentBorderColor #EF6C00
+skinparam noteBackgroundColor #E8F5E9
+skinparam noteBorderColor #2E7D32
+skinparam defaultFontName Microsoft YaHei
+
+title 纹理采样器工作原理
+
+package "纹理采样流程" {
+    component "像素着色器" as PS {
+        [UV坐标输入\n(u, v)] as UV
+    }
+    
+    component "采样器状态" as Sampler {
+        [过滤模式\nFilter] as Filter
+        [寻址模式\nAddressMode] as Address
+        [Mipmap控制\nLOD] as LOD
+    }
+    
+    component "纹理资源" as Texture {
+        [Mip Level 0\n(原始尺寸)] as Mip0
+        [Mip Level 1\n(1/2尺寸)] as Mip1
+        [Mip Level 2\n(1/4尺寸)] as Mip2
+        [Mip Level n\n(1x1)] as MipN
+    }
+    
+    component "最终颜色" as Color {
+        [RGBA] as RGBA
+    }
+}
+
+UV --> Sampler : UV坐标 (0~1)
+
+note top of Sampler
+    <b>D3D11_SAMPLER_DESC配置</b>
+    Filter = MIN_MAG_MIP_LINEAR
+    AddressU = WRAP
+    AddressV = WRAP
+    AddressW = WRAP
+    MinLOD = 0
+    MaxLOD = D3D11_FLOAT32_MAX
+end note
+
+Sampler --> Filter : 选择过滤算法
+
+note right of Filter
+    <b>MIN_MAG_MIP_LINEAR</b>
+    Min: 缩小时线性插值
+    Mag: 放大时线性插值
+    Mip: Mipmap层级间线性插值
+    
+    <b>其他选项:</b>
+    POINT: 最近邻采样（锯齿）
+    ANISOTROPIC: 各向异性（高质量）
+end note
+
+Sampler --> Address : 处理边界UV
+
+note right of Address
+    <b>WRAP模式（平铺）</b>
+    u = u - floor(u)
+    允许UV超出[0,1]范围
+    
+    <b>其他模式:</b>
+    CLAMP: 截断到[0,1]
+    MIRROR: 镜像重复
+    BORDER: 边界颜色
+end note
+
+Sampler --> LOD : 计算Mipmap层级
+
+note right of LOD
+    <b>LOD (Level of Detail)</b>
+    根据像素覆盖的纹素数量
+    自动选择合适的Mip层级
+    
+    远处物体 → 高LOD（小纹理）
+    近处物体 → 低LOD（大纹理）
+end note
+
+LOD --> Texture : 选择Mip层级
+
+note bottom of Texture
+    <b>Mipmap层级</b>
+    每级是上一级的1/2尺寸
+    减少远处纹理的走样
+    提高性能和质量
+end note
+
+Texture --> Color : 采样纹素并插值
+
+note bottom of Color
+    <b>双线性插值</b>
+    采样周围4个纹素
+    根据UV小数部分插值
+    
+    <b>三线性插值</b>
+    在相邻两个Mip层级间
+    再进行插值
+end note
+
+@enduml

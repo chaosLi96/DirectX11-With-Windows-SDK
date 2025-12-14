@@ -1,0 +1,119 @@
+@startuml 混合状态配置对比
+!define DARKBLUE #1E3A5F
+!define LIGHTBLUE #4A90E2
+!define GREEN #2ECC71
+!define ORANGE #E67E22
+
+skinparam defaultFontName Microsoft YaHei
+skinparam BackgroundColor white
+skinparam classBackgroundColor LIGHTBLUE
+skinparam classBorderColor DARKBLUE
+
+title 常用混合状态配置对比
+
+package "BSTransparent (透明混合)" #LightGreen {
+    class TransparentBlend {
+        + AlphaToCoverageEnable = false
+        + BlendEnable = true
+        + SrcBlend = **SRC_ALPHA**
+        + DestBlend = **INV_SRC_ALPHA**
+        + BlendOp = **ADD**
+        + SrcBlendAlpha = ONE
+        + DestBlendAlpha = ZERO
+        + BlendOpAlpha = ADD
+        --
+        **公式：**
+        RGB = α×Src + (1-α)×Dest
+        Alpha = SrcAlpha
+    }
+    
+    note right of TransparentBlend
+        **适用场景：**
+        - 半透明玻璃
+        - 水面
+        - 烟雾粒子
+    end note
+}
+
+package "BSAlphaToCoverage (Alpha覆盖)" #LightCoral {
+    class AlphaToCoverage {
+        + AlphaToCoverageEnable = **true**
+        + BlendEnable = false
+        + RenderTargetWriteMask = ALL
+        --
+        **特性：**
+        利用MSAA的子样本
+        根据Alpha值决定覆盖率
+        无需排序
+    }
+    
+    note right of AlphaToCoverage
+        **适用场景：**
+        - 树叶/草地
+        - 大量植被
+        - 避免排序开销
+    end note
+}
+
+package "BSAdditive (加法混合)" #LightYellow {
+    class AdditiveBlend {
+        + AlphaToCoverageEnable = false
+        + BlendEnable = true
+        + SrcBlend = **ONE**
+        + DestBlend = **ONE**
+        + BlendOp = **ADD**
+        + SrcBlendAlpha = ONE
+        + DestBlendAlpha = ZERO
+        --
+        **公式：**
+        RGB = Src + Dest
+        Alpha = SrcAlpha
+    }
+    
+    note right of AdditiveBlend
+        **适用场景：**
+        - 火焰
+        - 光晕/辉光
+        - 粒子特效
+        - 发光物体
+    end note
+}
+
+package "BSNoColorWrite (无颜色写入)" #LightGray {
+    class NoColorWrite {
+        + BlendEnable = false
+        + SrcBlend = ZERO
+        + DestBlend = ONE
+        + RenderTargetWriteMask = **0**
+        --
+        **特性：**
+        不修改颜色缓冲区
+        可写入深度/模板
+    }
+    
+    note right of NoColorWrite
+        **适用场景：**
+        - 模板写入
+        - 深度预处理
+        - 遮挡查询
+    end note
+}
+
+package "Disabled (禁用混合)" #White {
+    class NoBlend {
+        + BlendEnable = **false**
+        --
+        **公式：**
+        Output = Src
+        完全覆盖
+    }
+    
+    note right of NoBlend
+        **适用场景：**
+        - 不透明物体
+        - 默认渲染
+        - 性能最优
+    end note
+}
+
+@enduml

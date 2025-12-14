@@ -1,0 +1,60 @@
+@startuml 摄像机模式切换
+skinparam backgroundColor #FEFEFE
+skinparam stateBackgroundColor #E1F5FE
+skinparam stateBorderColor #0277BD
+skinparam defaultFontName Microsoft YaHei
+
+title 摄像机模式切换状态机
+
+[*] --> FirstPerson : 初始化
+
+state FirstPerson {
+    state "第一人称模式" as FPS
+    FPS : 摄像机位置 = 木箱位置
+    FPS : WASD: Walk/Strafe
+    FPS : 鼠标: Pitch/RotateY
+    FPS : 木箱跟随移动
+}
+
+state ThirdPerson {
+    state "第三人称模式" as TPS
+    TPS : 摄像机围绕木箱旋转
+    TPS : 鼠标拖拽: 旋转视角
+    TPS : 鼠标滚轮: 调整距离
+    TPS : 木箱固定不动
+}
+
+state FreeCamera {
+    state "自由摄像机模式" as Free
+    Free : 摄像机独立于木箱
+    Free : WASD: MoveForward/Strafe
+    Free : 鼠标: Pitch/RotateY
+    Free : 可以穿墙
+}
+
+FirstPerson --> ThirdPerson : 切换到第三人称
+note on link
+    创建ThirdPersonCamera
+    SetTarget(木箱位置)
+    SetDistance(8.0f)
+    SetDistanceMinMax(3.0f, 20.0f)
+end note
+
+ThirdPerson --> FreeCamera : 切换到自由摄像机
+note on link
+    创建FirstPersonCamera
+    位置 = 木箱位置 + (0, 3, 0)
+    LookTo(pos, forward, up)
+end note
+
+FreeCamera --> FirstPerson : 切换到第一人称
+note on link
+    使用现有FirstPersonCamera
+    LookTo(木箱位置, forward, up)
+end note
+
+FirstPerson --> FreeCamera : 切换到自由摄像机
+ThirdPerson --> FirstPerson : 切换到第一人称
+FreeCamera --> ThirdPerson : 切换到第三人称
+
+@enduml

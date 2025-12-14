@@ -1,0 +1,136 @@
+@startuml 类图
+!theme cerulean-outline
+skinparam defaultFontName Microsoft YaHei
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #E8F5E9
+skinparam classBorderColor #388E3C
+skinparam ArrowColor #1976D2
+
+title 渲染三角形项目 - 类图结构
+
+' 核心应用框架类
+class D3DApp {
+    {field} # m_pd3dDevice : ComPtr<ID3D11Device>
+    {field} # m_pd3dImmediateContext : ComPtr<ID3D11DeviceContext>
+    {field} # m_pSwapChain : ComPtr<IDXGISwapChain>
+    {field} # m_pRenderTargetView : ComPtr<ID3D11RenderTargetView>
+    {field} # m_pDepthStencilView : ComPtr<ID3D11DepthStencilView>
+    {field} # m_Timer : CpuTimer
+    --
+    {method} + Run() : int
+    {method} + {abstract} UpdateScene(dt : float) : void
+    {method} + {abstract} DrawScene() : void
+    {method} + virtual Init() : bool
+    {method} + virtual OnResize() : void
+}
+
+' 游戏应用类
+class GameApp {
+    {field} - m_pVertexLayout : ComPtr<ID3D11InputLayout>
+    {field} - m_pVertexBuffer : ComPtr<ID3D11Buffer>
+    {field} - m_pVertexShader : ComPtr<ID3D11VertexShader>
+    {field} - m_pPixelShader : ComPtr<ID3D11PixelShader>
+    --
+    {method} + Init() : bool
+    {method} + UpdateScene(dt : float) : void
+    {method} + DrawScene() : void
+    {method} - InitEffect() : bool
+    {method} - InitResource() : bool
+}
+
+' 顶点结构体
+class VertexPosColor <<struct>> {
+    {field} + pos : XMFLOAT3
+    {field} + color : XMFLOAT4
+    {field} + {static} inputLayout[] : D3D11_INPUT_ELEMENT_DESC
+}
+
+' Direct3D COM 接口
+interface ID3D11VertexShader <<COM Interface>> {
+    顶点着色器
+}
+
+interface ID3D11PixelShader <<COM Interface>> {
+    像素着色器
+}
+
+interface ID3D11InputLayout <<COM Interface>> {
+    输入布局
+    定义顶点结构
+}
+
+interface ID3D11Buffer <<COM Interface>> {
+    缓冲区资源
+    存储顶点数据
+}
+
+' HLSL 着色器
+class "Triangle_VS.hlsl" as VS <<HLSL>> {
+    {method} VS(vIn : VertexIn) : VertexOut
+}
+
+class "Triangle_PS.hlsl" as PS <<HLSL>> {
+    {method} PS(pIn : VertexOut) : float4
+}
+
+class "Triangle.hlsli" as HLSLI <<HLSL Header>> {
+    struct VertexIn
+    struct VertexOut
+}
+
+' 工具函数
+class d3dUtil <<Utility>> {
+    {method} {static} CreateShaderFromFile(...) : HRESULT
+    {method} {static} D3D11SetDebugObjectName(...) : void
+}
+
+' 关系定义
+GameApp --|> D3DApp : 继承
+GameApp +-- VertexPosColor : 内部类
+GameApp o-- ID3D11VertexShader : 使用
+GameApp o-- ID3D11PixelShader : 使用
+GameApp o-- ID3D11InputLayout : 使用
+GameApp o-- ID3D11Buffer : 使用
+GameApp ..> d3dUtil : 依赖
+
+VS ..|> ID3D11VertexShader : 编译为
+PS ..|> ID3D11PixelShader : 编译为
+VS ..> HLSLI : include
+PS ..> HLSLI : include
+
+VertexPosColor ..> ID3D11InputLayout : 定义输入布局
+VertexPosColor ..> ID3D11Buffer : 存储在
+
+note right of GameApp
+  **GameApp 新增功能：**
+  
+  • 创建顶点着色器
+  • 创建像素着色器
+  • 定义输入布局
+  • 创建顶点缓冲区
+  • 绑定资源到渲染管线
+  • 绘制三角形
+end note
+
+note bottom of VertexPosColor
+  **顶点结构：**
+  pos: 位置 (x, y, z)
+  color: 颜色 (r, g, b, a)
+  
+  输入布局描述顶点数据格式
+end note
+
+note right of VS
+  **顶点着色器职责：**
+  • 接收顶点位置和颜色
+  • 输出齐次坐标位置
+  • 传递颜色到像素着色器
+end note
+
+note right of PS
+  **像素着色器职责：**
+  • 接收插值后的颜色
+  • 输出最终像素颜色
+end note
+
+@enduml

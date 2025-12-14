@@ -1,0 +1,115 @@
+@startuml 初始化流程
+!theme cerulean-outline
+skinparam defaultFontName Microsoft YaHei
+skinparam backgroundColor #FEFEFE
+skinparam ActivityBackgroundColor #E3F2FD
+skinparam ActivityBorderColor #1976D2
+skinparam ActivityDiamondBackgroundColor #FFF9C4
+
+title 渲染三角形 - 初始化流程
+
+start
+
+:WinMain 入口;
+
+:创建 GameApp 对象;
+
+:GameApp::Init();
+
+partition "D3DApp::Init()" {
+  :InitMainWindow();
+  :InitDirect3D();
+}
+
+partition "GameApp::InitEffect()" {
+  
+  :从文件加载顶点着色器;
+  note right
+    CreateShaderFromFile()
+    - .cso (编译后的着色器)
+    - .hlsl (源代码备用)
+  end note
+  
+  :CreateVertexShader();
+  note right
+    m_pVertexShader
+  end note
+  
+  :CreateInputLayout();
+  note right
+    m_pVertexLayout
+    基于顶点着色器签名
+    匹配 VertexPosColor 结构
+  end note
+  
+  :从文件加载像素着色器;
+  
+  :CreatePixelShader();
+  note right
+    m_pPixelShader
+  end note
+}
+
+partition "GameApp::InitResource()" {
+  
+  :定义三角形顶点数据;
+  note right
+    VertexPosColor vertices[3]
+    - 顶点0: (0.0, 0.5, 0.5), 绿色
+    - 顶点1: (0.5, -0.5, 0.5), 蓝色
+    - 顶点2: (-0.5, -0.5, 0.5), 红色
+  end note
+  
+  :填充缓冲区描述符;
+  note right
+    D3D11_BUFFER_DESC
+    - Usage: IMMUTABLE
+    - ByteWidth: 3 * sizeof(VertexPosColor)
+    - BindFlags: VERTEX_BUFFER
+  end note
+  
+  :CreateBuffer();
+  note right
+    m_pVertexBuffer
+    初始化数据: vertices 数组
+  end note
+  
+  :===绑定资源到渲染管线===;
+  
+  :IASetVertexBuffers();
+  note right
+    输入装配器
+    绑定顶点缓冲区
+    stride = sizeof(VertexPosColor)
+    offset = 0
+  end note
+  
+  :IASetPrimitiveTopology();
+  note right
+    设置图元类型
+    D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+  end note
+  
+  :IASetInputLayout();
+  note right
+    设置输入布局
+  end note
+  
+  :VSSetShader();
+  note right
+    绑定顶点着色器
+  end note
+  
+  :PSSetShader();
+  note right
+    绑定像素着色器
+  end note
+  
+  :设置调试对象名称;
+}
+
+:进入游戏主循环 Run();
+
+stop
+
+@enduml

@@ -1,0 +1,33 @@
+@startuml Direct2D和Direct3D互操作初始化
+skinparam defaultFontName "Microsoft YaHei"
+
+start
+
+:创建Direct2D工厂\nD2D1CreateFactory();
+
+:创建DirectWrite工厂\nDWriteCreateFactory();
+
+:创建Direct3D设备和交换链;
+
+partition "OnResize时创建共享渲染目标" {
+  :从交换链获取后台缓冲区的DXGI表面\nGetBuffer(0, IDXGISurface);
+  
+  :配置渲染目标属性\nRENDER_TARGET_TYPE_DEFAULT\nALPHA_MODE_PREMULTIPLIED;
+  
+  :创建DXGI表面渲染目标\nCreateDxgiSurfaceRenderTarget();
+  
+  if (创建成功?) then (是)
+    :创建固定颜色画刷\nCreateSolidColorBrush();
+    :创建文本格式\nCreateTextFormat();
+  else (否)
+    if (E_NOINTERFACE错误?) then (是)
+      :输出警告信息\n(Win7需要SP1和KB2670838补丁);
+    else (其他错误)
+      :Assert失败;
+    endif
+  endif
+}
+
+stop
+
+@enduml

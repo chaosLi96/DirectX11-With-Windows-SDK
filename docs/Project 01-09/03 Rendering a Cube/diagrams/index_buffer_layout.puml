@@ -1,0 +1,133 @@
+@startuml 索引缓冲区内存布局
+skinparam defaultFontName Microsoft YaHei
+skinparam rectangle {
+    BackgroundColor LightYellow
+    BorderColor Black
+}
+
+title 立方体顶点和索引缓冲区布局
+
+rectangle "顶点缓冲区 (8个顶点)" as VB {
+    rectangle "顶点0 [黑色]" as V0 #000000
+    note right of V0
+      pos: (-1, -1, -1)
+      color: (0, 0, 0, 1)
+      偏移: 0 bytes
+    end note
+    
+    rectangle "顶点1 [红色]" as V1 #FF0000
+    note right of V1
+      pos: (-1, 1, -1)
+      color: (1, 0, 0, 1)
+      偏移: 28 bytes
+    end note
+    
+    rectangle "顶点2 [黄色]" as V2 #FFFF00
+    note right of V2
+      pos: (1, 1, -1)
+      color: (1, 1, 0, 1)
+      偏移: 56 bytes
+    end note
+    
+    rectangle "顶点3 [绿色]" as V3 #00FF00
+    note right of V3
+      pos: (1, -1, -1)
+      color: (0, 1, 0, 1)
+      偏移: 84 bytes
+    end note
+    
+    rectangle "顶点4 [蓝色]" as V4 #0000FF
+    note right of V4
+      pos: (-1, -1, 1)
+      color: (0, 0, 1, 1)
+      偏移: 112 bytes
+    end note
+    
+    rectangle "顶点5 [品红]" as V5 #FF00FF
+    note right of V5
+      pos: (-1, 1, 1)
+      color: (1, 0, 1, 1)
+      偏移: 140 bytes
+    end note
+    
+    rectangle "顶点6 [白色]" as V6 #FFFFFF
+    note right of V6
+      pos: (1, 1, 1)
+      color: (1, 1, 1, 1)
+      偏移: 168 bytes
+    end note
+    
+    rectangle "顶点7 [青色]" as V7 #00FFFF
+    note right of V7
+      pos: (1, -1, 1)
+      color: (0, 1, 1, 1)
+      偏移: 196 bytes
+    end note
+}
+
+note right of VB
+  **顶点结构**
+  struct VertexPosColor {
+    XMFLOAT3 pos;   // 12 bytes
+    XMFLOAT4 color; // 16 bytes
+  };
+  总大小: 28 bytes/顶点
+  
+  **缓冲区总大小**
+  8 顶点 × 28 bytes = 224 bytes
+end note
+
+rectangle "索引缓冲区 (36个索引)" as IB {
+    rectangle "正面 (Front)" as Front
+    note right of Front
+      三角形1: 0, 1, 2
+      三角形2: 2, 3, 0
+    end note
+    
+    rectangle "左面 (Left)" as Left
+    note right of Left
+      三角形1: 4, 5, 1
+      三角形2: 1, 0, 4
+    end note
+    
+    rectangle "顶面 (Top)" as Top
+    note right of Top
+      三角形1: 1, 5, 6
+      三角形2: 6, 2, 1
+    end note
+    
+    rectangle "背面 (Back)" as Back
+    note right of Back
+      三角形1: 7, 6, 5
+      三角形2: 5, 4, 7
+    end note
+    
+    rectangle "右面 (Right)" as Right
+    note right of Right
+      三角形1: 3, 2, 6
+      三角形2: 6, 7, 3
+    end note
+    
+    rectangle "底面 (Bottom)" as Bottom
+    note right of Bottom
+      三角形1: 4, 0, 3
+      三角形2: 3, 7, 4
+    end note
+}
+
+note right of IB
+  **索引格式**
+  DXGI_FORMAT_R32_UINT
+  每个索引 4 bytes
+  
+  **缓冲区总大小**
+  36 索引 × 4 bytes = 144 bytes
+  
+  **优势**
+  • 8个顶点定义 (vs 36个顶点)
+  • 节省内存: 224+144=368 bytes
+  • 无索引: 36×28=1008 bytes
+  • 节省率: 63.5%
+end note
+
+@enduml

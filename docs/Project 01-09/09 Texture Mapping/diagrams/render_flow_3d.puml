@@ -1,0 +1,107 @@
+@startuml 3D纹理渲染流程
+skinparam backgroundColor #FEFEFE
+skinparam participantBackgroundColor #FFF9C4
+skinparam participantBorderColor #F57F17
+skinparam sequenceArrowColor #1976D2
+skinparam sequenceLifeLineBorderColor #00796B
+skinparam defaultFontName Microsoft YaHei
+
+title 3D纹理渲染流程（木盒）
+
+participant "GameApp" as App
+participant "立方体网格" as Mesh
+participant "顶点着色器" as VS
+participant "像素着色器" as PS
+participant "纹理资源" as Tex
+participant "采样器" as Sampler
+
+App -> App : UpdateScene()
+activate App
+note right
+    旋转变换
+    phi += 0.0001f
+    theta += 0.00015f
+    W = RotationX(phi) * RotationY(theta)
+end note
+
+App -> App : 更新VS常量缓冲区
+note right
+    world = W
+    worldInvTranspose = InverseTranspose(W)
+end note
+deactivate App
+
+App -> App : DrawScene()
+activate App
+
+App -> Mesh : 设置顶点/索引缓冲区
+activate Mesh
+Mesh -> Mesh : IASetVertexBuffers()
+Mesh -> Mesh : IASetIndexBuffer()
+Mesh -> Mesh : IASetInputLayout(3D)
+deactivate Mesh
+
+App -> VS : 设置顶点着色器
+activate VS
+VS -> VS : VSSetShader(3D)
+VS -> VS : VSSetConstantBuffers(b0)
+deactivate VS
+
+App -> PS : 设置像素着色器
+activate PS
+PS -> PS : PSSetShader(3D)
+PS -> PS : PSSetConstantBuffers(b1)
+PS -> Tex : PSSetShaderResources(t0, WoodCrate)
+activate Tex
+Tex --> PS : SRV绑定
+deactivate Tex
+PS -> Sampler : PSSetSamplers(s0)
+activate Sampler
+Sampler --> PS : 采样器状态绑定
+deactivate Sampler
+deactivate PS
+
+App -> App : DrawIndexed(indexCount)
+activate App
+
+loop 每个三角形
+    VS -> VS : 顶点变换
+    note right
+        posW = mul(posL, g_World)
+        posH = mul(posW, viewProj)
+        normalW = mul(normalL, WorldInvTranspose)
+        输出tex坐标
+    end note
+    
+    PS -> Tex : Sample(sampler, tex)
+    activate Tex
+    Tex -> Sampler : 使用采样器采样纹理
+    activate Sampler
+    note right
+        根据UV坐标采样
+        线性插值
+        Mipmap层级选择
+    end note
+    Sampler --> Tex : 返回纹理颜色
+    deactivate Sampler
+    Tex --> PS : texColor
+    deactivate Tex
+    
+    PS -> PS : 计算光照
+    note right
+        ambient = texColor * ambient
+        diffuse = texColor * diffuse
+        specular = spec
+        litColor = ambient + diffuse + specular
+    end note
+    
+    PS --> App : 返回最终颜色
+end
+
+deactivate App
+
+App -> App : Present()
+
+deactivate App
+
+@enduml

@@ -1,0 +1,118 @@
+@startuml ImGui渲染流程
+skinparam defaultFontName Microsoft YaHei
+
+participant "GameApp" as App
+participant "ImGui" as ImGui
+participant "ImGui_ImplDX11" as Backend
+participant "ID3D11DeviceContext" as Context
+participant "GPU" as GPU
+
+== 准备阶段 (每帧开始) ==
+
+App -> Backend : ImGui_ImplDX11_NewFrame()
+activate Backend
+Backend -> Backend : 准备渲染状态\n计算投影矩阵
+deactivate Backend
+
+App -> ImGui : ImGui::NewFrame()
+activate ImGui
+ImGui -> ImGui : 初始化新帧\n清空绘制列表
+deactivate ImGui
+
+== UI构建阶段 ==
+
+App -> ImGui : ImGui::Begin("Window")
+App -> ImGui : ImGui::Button("Click")
+App -> ImGui : ImGui::SliderFloat(...)
+App -> ImGui : ImGui::ColorEdit3(...)
+App -> ImGui : ImGui::End()
+
+note right of ImGui
+  **即时模式**
+  每个控件调用都会：
+  1. 检测鼠标交互
+  2. 更新控件状态
+  3. 生成绘制命令
+end note
+
+== 绘制场景 ==
+
+App -> Context : DrawIndexed(36, 0, 0)
+note right : 绘制立方体
+
+== ImGui渲染 ==
+
+App -> ImGui : ImGui::Render()
+activate ImGui
+ImGui -> ImGui : 完成当前帧\n生成绘制命令列表
+note right
+  **ImDrawData**
+  • 顶点缓冲区数据
+  • 索引缓冲区数据
+  • 绘制命令列表
+  • 裁剪矩形
+end note
+deactivate ImGui
+
+App -> ImGui : ImGui::GetDrawData()
+ImGui --> App : ImDrawData*
+
+App -> Backend : ImGui_ImplDX11_RenderDrawData(drawData)
+activate Backend
+
+Backend -> Backend : 保存当前渲染状态
+note right
+  保存：
+  • 着色器
+  • 缓冲区绑定
+  • 混合状态
+  • 光栅化状态
+  • 深度模板状态
+end note
+
+Backend -> Context : 设置ImGui渲染状态
+note right
+  **ImGui渲染状态**
+  • 顶点着色器: ImGui_VS
+  • 像素着色器: ImGui_PS
+  • 混合: Alpha混合
+  • 深度测试: 禁用
+  • 背面剔除: 禁用
+end note
+
+Backend -> Context : IASetVertexBuffers(ImGui顶点数据)
+Backend -> Context : IASetIndexBuffer(ImGui索引数据)
+Backend -> Context : PSSetShaderResources(字体纹理)
+
+loop 对每个绘制命令
+    Backend -> Context : RSSetScissorRects(裁剪矩形)
+    note right
+      每个UI元素可能有不同的裁剪区域
+    end note
+    
+    Backend -> Context : DrawIndexed(idxCount, idxOffset, vtxOffset)
+    Context -> GPU : 渲染UI元素
+end
+
+Backend -> Backend : 恢复原渲染状态
+note right
+  恢复所有之前保存的状态
+  确保不影响用户渲染
+end note
+
+deactivate Backend
+
+App -> Context : Present(0, 0)
+note right : 呈现到屏幕
+
+note bottom
+  **ImGui渲染特点**
+  • 使用独立的顶点/索引缓冲区
+  • 每帧动态更新缓冲区内容
+  • 使用字体图集纹理渲染文本
+  • Alpha混合实现透明UI
+  • 裁剪矩形实现窗口边界
+  • 不干扰用户渲染状态
+end note
+
+@enduml

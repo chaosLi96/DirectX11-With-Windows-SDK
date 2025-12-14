@@ -1,0 +1,80 @@
+@startuml 双面渲染与剔除状态
+!define DARKBLUE #1E3A5F
+!define LIGHTBLUE #4A90E2
+!define GREEN #2ECC71
+!define ORANGE #E67E22
+
+skinparam defaultFontName Microsoft YaHei
+skinparam BackgroundColor white
+skinparam componentBackgroundColor LIGHTBLUE
+skinparam componentBorderColor DARKBLUE
+
+title 双面渲染与背面剔除
+
+rectangle "默认光栅化状态(nullptr)" as DEFAULT #LightGray {
+    component "CullMode = CULL_BACK" as CULL1
+    component "FrontCounterClockwise = false" as FRONT1
+    
+    note right of CULL1
+        **背面剔除(逆时针=正面)：**
+        - 只渲染正面
+        - 节省50%像素
+        - 闭合网格适用
+    end note
+}
+
+rectangle "RSNoCull (无背面剔除)" as NOCULL #LightGreen {
+    component "CullMode = CULL_NONE" as CULL2
+    component "FillMode = SOLID" as FILL
+    component "FrontCounterClockwise = false" as FRONT2
+    
+    note right of CULL2
+        **双面渲染：**
+        - 正反面都绘制
+        - 性能开销大
+        - 透明/薄片物体必须
+    end note
+}
+
+package "GameApp渲染流程" {
+    component "不透明物体\n(Walls, Floor)" as OBJ1
+    component "透明物体\n(WireFence, Water)" as OBJ2
+}
+
+DEFAULT --> OBJ1 : 应用于
+NOCULL --> OBJ2 : 应用于
+
+note bottom of OBJ2
+    **为什么透明物体需要双面渲染？**
+    
+    1. 视角问题
+       - 可从任意角度观察
+       - 正反面都可能可见
+    
+    2. 篱笆盒示例
+       - 镂空纹理
+       - 内外都需显示
+    
+    3. 水面示例
+       - 水下观察需要反面
+       - 水上观察需要正面
+    
+    **代码：**
+    m_pd3dImmediateContext->RSSetState(RenderStates::RSNoCull.Get());
+end note
+
+rectangle "背面剔除原理" as PRINCIPLE #LightYellow {
+    component "叉乘判断三角形朝向" as CROSS
+    
+    note right of CROSS
+        **顶点顺序：**
+        V0, V1, V2 (逆时针) → 正面
+        V0, V2, V1 (顺时针) → 背面
+        
+        **叉乘计算：**
+        N = (V1-V0) × (V2-V0)
+        if dot(N, ViewDir) < 0: 剔除
+    end note
+}
+
+@enduml

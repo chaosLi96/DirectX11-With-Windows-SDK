@@ -1,0 +1,87 @@
+@startuml 变换矩阵流程
+skinparam defaultFontName Microsoft YaHei
+
+|顶点着色器|
+start
+
+:接收顶点输入\nVertexIn vIn;
+note right
+  vIn.posL: float3 局部坐标
+  vIn.color: float4 颜色
+end note
+
+:读取常量缓冲区;
+note right
+  g_World: 世界矩阵
+  g_View: 观察矩阵
+  g_Proj: 投影矩阵
+end note
+
+partition "坐标空间变换" {
+    :posH = mul(float4(posL, 1.0f), g_World);
+    note right
+      **局部空间 → 世界空间**
+      • 局部空间: 模型自己的坐标系
+      • 世界空间: 场景统一坐标系
+      • World矩阵: 旋转、缩放、平移
+      
+      **本例中的World矩阵:**
+      RotationX(phi) * RotationY(theta)
+      实现绕X轴和Y轴旋转
+    end note
+    
+    :posH = mul(posH, g_View);
+    note right
+      **世界空间 → 观察空间 (相机空间)**
+      • 以摄像机为原点
+      • 摄像机朝向 -Z 方向
+      
+      **本例中的View矩阵:**
+      LookAtLH(
+        eye: (0, 0, -5),    // 摄像机位置
+        at: (0, 0, 0),      // 观察目标
+        up: (0, 1, 0)       // 上方向
+      )
+    end note
+    
+    :posH = mul(posH, g_Proj);
+    note right
+      **观察空间 → 裁剪空间 (投影空间)**
+      • 透视投影: 近大远小
+      • 结果: float4 齐次坐标
+      
+      **本例中的Proj矩阵:**
+      PerspectiveFovLH(
+        fovY: π/2 (90度),
+        aspect: width/height,
+        nearZ: 1.0f,
+        farZ: 1000.0f
+      )
+    end note
+}
+
+:color = vIn.color;
+note right
+  颜色直接传递
+  不进行变换
+end note
+
+:返回 VertexOut\n(posH, color);
+note right
+  posH: SV_POSITION (裁剪空间坐标)
+  后续由硬件自动进行:
+  • 透视除法 (posH.xyz / posH.w)
+  • 视口变换 → 屏幕空间
+  
+  **坐标变换总结**
+  局部 → 世界 → 观察 → 裁剪
+  
+  **矩阵乘法顺序**
+  DirectXMath: v' = v × M1 × M2 × M3
+  HLSL: v' = M3 × M2 × M1 × v
+  需要在C++端转置后再传递
+end note
+
+stop
+
+@enduml

@@ -1,0 +1,100 @@
+@startuml 交互控制流程
+skinparam defaultFontName Microsoft YaHei
+
+|UpdateScene|
+start
+
+:ImGui::Begin("Use ImGui");
+
+partition "UI控件区域" {
+    :创建Checkbox("Animate Cube", &animateCube);
+    note right
+      控制是否自动旋转
+    end note
+    
+    :创建Button("Reset Params");
+    if (按钮被点击?) then (是)
+        :重置所有参数\ntx=ty=phi=theta=0\nscale=1.0, fov=90度;
+    endif
+    
+    :创建SliderFloat("Scale", &scale, 0.2, 2.0);
+    note right
+      通过滑块控制缩放
+    end note
+    
+    :显示当前角度信息\nText("Phi: %.2f degrees", ...);
+    
+    :创建SliderFloat(phi角度滑块);
+    :创建SliderFloat(theta角度滑块);
+    
+    :显示位置信息\nText("Position: (%.1f, %.1f)", tx, ty);
+    
+    :显示FOV信息\nText("FOV: %.2f degrees", ...);
+    :创建SliderFloat(FOV滑块);
+    
+    if (Checkbox("Use Custom Color")) then (勾选)
+        :m_CBuffer.useCustomColor = true;
+        :显示ColorEdit3颜色选择器;
+        note right
+          RGB颜色选择
+          实时更新m_CBuffer.color
+        end note
+    else (未勾选)
+        :使用顶点颜色;
+    endif
+}
+
+:ImGui::End();
+
+partition "鼠标交互处理" {
+    :获取ImGuiIO& io;
+    
+    if (ImGui::IsAnyItemActive()?) then (有UI激活)
+        :跳过场景交互;
+        note right
+          防止操作UI时误操作场景
+        end note
+    else (无UI激活)
+        if (鼠标左键拖拽?) then (是)
+            :平移立方体\ntx += io.MouseDelta.x * 0.01f\nty -= io.MouseDelta.y * 0.01f;
+            note right
+              左键拖拽 = 平移
+            end note
+        else if (鼠标右键拖拽?) then (是)
+            :旋转立方体\nphi -= io.MouseDelta.y * 0.01f\ntheta -= io.MouseDelta.x * 0.01f;
+            note right
+              右键拖拽 = 旋转
+            end note
+        else if (滚轮滚动?) then (是)
+            :缩放立方体\nscale += 0.02f * io.MouseWheel;
+            :限制scale范围 [0.2, 2.0];
+            note right
+              滚轮 = 缩放
+            end note
+        endif
+    endif
+}
+
+partition "更新变换矩阵" {
+    :计算World矩阵\n= Scale × RotX(phi) × RotY(theta) × Translate(tx,ty,0);
+    
+    :计算Proj矩阵\n= PerspectiveFOV(fov, aspect, 1.0, 1000.0);
+    note right
+      FOV可通过UI滑块调整
+    end note
+    
+    :Map常量缓冲区;
+    :memcpy更新GPU数据;
+    :Unmap常量缓冲区;
+}
+
+stop
+
+note right
+  **交互优先级**
+  1. ImGui UI控件优先
+  2. IsAnyItemActive()检测
+  3. 场景交互在UI空闲时处理
+end note
+
+@enduml

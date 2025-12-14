@@ -1,0 +1,75 @@
+@startuml 投影矩阵和视锥体
+skinparam backgroundColor #FEFEFE
+skinparam componentBackgroundColor #FFF9C4
+skinparam componentBorderColor #F57F17
+skinparam noteBackgroundColor #E8F5E9
+skinparam noteBorderColor #2E7D32
+skinparam defaultFontName Microsoft YaHei
+
+title 投影矩阵和视锥体
+
+component "视锥体参数" as Frustum {
+    [FOV-Y: PI/3] as FOVY
+    [Aspect: Width/Height] as Aspect
+    [Near-Z: 0.5f] as NearZ
+    [Far-Z: 1000.0f] as FarZ
+}
+
+note top of Frustum
+    SetFrustum(fovY, aspect, nearZ, farZ)
+    定义可视空间
+end note
+
+component "投影矩阵" as ProjMatrix {
+    label "透视投影矩阵\nProj = PerspectiveFovLH(fovY, aspect, nearZ, farZ)"
+}
+
+FOVY --> ProjMatrix
+Aspect --> ProjMatrix
+NearZ --> ProjMatrix
+FarZ --> ProjMatrix
+
+note right of ProjMatrix
+    投影矩阵公式:
+    
+    yscale = cot(fovY/2)
+    xscale = yscale / aspect
+    
+    [xscale    0         0              0      ]
+    [0      yscale       0              0      ]
+    [0         0    farZ/(farZ-nearZ)   1      ]
+    [0         0   -nearZ*farZ/(farZ-nearZ) 0 ]
+    
+    将视锥体映射到NDC空间[-1,1]³
+end note
+
+component "视口变换" as Viewport {
+    [TopLeftX: 0] as X
+    [TopLeftY: 0] as Y
+    [Width: ClientWidth] as W
+    [Height: ClientHeight] as H
+    [MinDepth: 0.0f] as MinD
+    [MaxDepth: 1.0f] as MaxD
+}
+
+note top of Viewport
+    SetViewPort(x, y, w, h, minD, maxD)
+    NDC到屏幕空间的映射
+end note
+
+ProjMatrix --> Viewport : NDC空间
+
+note bottom of Viewport
+    视口变换:
+    screenX = (ndcX + 1) * width / 2 + topLeftX
+    screenY = (1 - ndcY) * height / 2 + topLeftY
+    depth = ndcZ * (maxD - minD) + minD
+end note
+
+component "完整变换管线" as Pipeline {
+    label "模型空间 → 世界空间 → 视图空间 → 裁剪空间 → NDC → 屏幕空间"
+}
+
+Viewport --> Pipeline
+
+@enduml

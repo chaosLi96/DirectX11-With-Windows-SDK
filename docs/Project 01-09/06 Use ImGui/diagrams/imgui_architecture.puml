@@ -1,0 +1,88 @@
+@startuml ImGui集成架构
+skinparam defaultFontName Microsoft YaHei
+
+package "应用程序层" {
+    [GameApp] as App
+    [UpdateScene(dt)] as Update
+    [DrawScene()] as Draw
+}
+
+package "ImGui核心库" {
+    [ImGui Context] as Context
+    [UI 控件] as Widgets
+    [输入处理] as Input
+    [布局系统] as Layout
+    [绘制命令生成] as DrawCmd
+}
+
+package "ImGui后端" {
+    [ImGui_ImplWin32] as Win32Backend
+    [ImGui_ImplDX11] as DX11Backend
+}
+
+package "DirectX11" {
+    [ID3D11Device] as Device
+    [ID3D11DeviceContext] as DeviceContext
+    [顶点缓冲区] as VB
+    [索引缓冲区] as IB
+    [纹理 (字体图集)] as FontTex
+    [着色器] as Shader
+}
+
+package "Windows" {
+    [窗口消息] as WinMsg
+    [鼠标输入] as Mouse
+    [键盘输入] as Keyboard
+}
+
+' 连接关系
+App --> Update
+App --> Draw
+
+Update --> Widgets : 创建UI控件
+Update --> Input : 读取输入状态
+
+Widgets --> Context : 状态更新
+Input --> Context
+
+Draw --> DrawCmd : ImGui::Render()
+DrawCmd --> DX11Backend : GetDrawData()
+
+DX11Backend --> Device : 创建资源
+DX11Backend --> DeviceContext : 设置管线状态
+DX11Backend --> VB : 更新顶点数据
+DX11Backend --> IB : 更新索引数据
+DX11Backend --> FontTex : 绑定字体纹理
+DX11Backend --> Shader : 绑定ImGui着色器
+
+Win32Backend --> WinMsg : 处理消息
+WinMsg --> Mouse
+WinMsg --> Keyboard
+Mouse --> Input
+Keyboard --> Input
+
+note right of Context
+  **ImGui上下文**
+  • 管理所有UI状态
+  • 单例模式
+  • 每帧重建
+end note
+
+note right of DX11Backend
+  **DirectX11后端**
+  • 将ImGui绘制命令
+    转换为D3D11调用
+  • 管理ImGui专用资源
+  • 与用户渲染隔离
+end note
+
+note bottom of Widgets
+  **即时模式UI**
+  每帧重新声明所有控件
+  无需手动管理UI对象生命周期
+  
+  if (ImGui::Button("Click"))
+      DoSomething();
+end note
+
+@enduml

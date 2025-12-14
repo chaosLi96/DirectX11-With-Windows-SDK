@@ -1,0 +1,122 @@
+@startuml 类图
+skinparam defaultFontName "Microsoft YaHei"
+skinparam classAttributeIconSize 0
+
+class GameApp {
+  - m_pVertexBuffer : ID3D11Buffer*
+  - m_pIndexBuffer : ID3D11Buffer*
+  - m_pConstantBuffers[2] : ID3D11Buffer*
+  - m_VSConstantBuffer : VSConstantBuffer
+  - m_PSConstantBuffer : PSConstantBuffer
+  - m_DirLight : DirectionalLight
+  - m_PointLight : PointLight
+  - m_SpotLight : SpotLight
+  - m_IsWireframeMode : bool
+  + UpdateScene(dt : float) : void
+  + DrawScene() : void
+  - InitEffect() : bool
+  - InitResource() : bool
+  - ResetMesh(meshData) : bool
+}
+
+class VSConstantBuffer <<struct>> {
+  + world : XMMATRIX
+  + view : XMMATRIX
+  + proj : XMMATRIX
+  + worldInvTranspose : XMMATRIX
+}
+
+class PSConstantBuffer <<struct>> {
+  + dirLight : DirectionalLight
+  + pointLight : PointLight
+  + spotLight : SpotLight
+  + material : Material
+  + eyePos : XMFLOAT4
+}
+
+class DirectionalLight <<struct>> {
+  + ambient : XMFLOAT4
+  + diffuse : XMFLOAT4
+  + specular : XMFLOAT4
+  + direction : XMFLOAT3
+  + pad : float
+}
+
+class PointLight <<struct>> {
+  + ambient : XMFLOAT4
+  + diffuse : XMFLOAT4
+  + specular : XMFLOAT4
+  + position : XMFLOAT3
+  + range : float
+  + att : XMFLOAT3
+  + pad : float
+}
+
+class SpotLight <<struct>> {
+  + ambient : XMFLOAT4
+  + diffuse : XMFLOAT4
+  + specular : XMFLOAT4
+  + position : XMFLOAT3
+  + range : float
+  + direction : XMFLOAT3
+  + spot : float
+  + att : XMFLOAT3
+  + pad : float
+}
+
+class Material <<struct>> {
+  + ambient : XMFLOAT4
+  + diffuse : XMFLOAT4
+  + specular : XMFLOAT4
+  + reflect : XMFLOAT4
+}
+
+class VertexPosNormalColor <<struct>> {
+  + pos : XMFLOAT3
+  + normal : XMFLOAT3
+  + color : XMFLOAT4
+}
+
+GameApp *-- VSConstantBuffer : 包含
+GameApp *-- PSConstantBuffer : 包含
+GameApp *-- DirectionalLight : 包含
+GameApp *-- PointLight : 包含
+GameApp *-- SpotLight : 包含
+
+PSConstantBuffer *-- DirectionalLight : 包含
+PSConstantBuffer *-- PointLight : 包含
+PSConstantBuffer *-- SpotLight : 包含
+PSConstantBuffer *-- Material : 包含
+
+note right of VSConstantBuffer
+  顶点着色器常量缓冲区
+  包含变换矩阵
+  worldInvTranspose用于
+  正确变换法线向量
+end note
+
+note right of PSConstantBuffer
+  像素着色器常量缓冲区
+  包含三种光源、材质
+  和摄像机位置
+end note
+
+note bottom of DirectionalLight
+  方向光：平行光
+  只有方向，无位置
+  模拟太阳光
+end note
+
+note bottom of PointLight
+  点光源：向四周发光
+  有位置、范围和衰减
+  模拟灯泡
+end note
+
+note bottom of SpotLight
+  聚光灯：锥形光
+  有位置、方向、范围
+  模拟手电筒
+end note
+
+@enduml

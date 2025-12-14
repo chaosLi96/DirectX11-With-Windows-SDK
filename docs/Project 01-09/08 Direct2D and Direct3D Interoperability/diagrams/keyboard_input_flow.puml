@@ -1,0 +1,51 @@
+@startuml 键盘输入处理流程
+skinparam defaultFontName "Microsoft YaHei"
+
+start
+
+:每帧调用 UpdateScene(dt);
+
+:获取键盘状态\nstate = m_pKeyboard->GetState();
+
+:更新键盘跟踪器\nm_KeyboardTracker.Update(state);
+
+partition "光源切换" {
+  if (按下数字键1?) then (是)
+    :启用方向光\n禁用点光源和聚光灯;
+  elseif (按下数字键2?) then (是)
+    :启用点光源\n禁用方向光和聚光灯;
+  elseif (按下数字键3?) then (是)
+    :启用聚光灯\n禁用方向光和点光源;
+  endif
+}
+
+partition "几何体切换" {
+  if (按下Q键?) then (是)
+    :创建立方体\nCreateBox();
+    :重置网格\nResetMesh();
+  elseif (按下W键?) then (是)
+    :创建球体\nCreateSphere();
+    :重置网格;
+  elseif (按下E键?) then (是)
+    :创建圆柱\nCreateCylinder();
+    :重置网格;
+  elseif (按下R键?) then (是)
+    :创建圆锥\nCreateCone();
+    :重置网格;
+  endif
+}
+
+partition "渲染模式切换" {
+  if (按下S键?) then (是)
+    :切换线框/面模式\nm_IsWireframeMode = !m_IsWireframeMode;
+    :设置光栅化状态\nRSSetState();
+  endif
+}
+
+:更新常量缓冲区\nMap/Unmap;
+
+:物体旋转动画\nphi += 0.3 × dt\ntheta += 0.37 × dt;
+
+stop
+
+@enduml

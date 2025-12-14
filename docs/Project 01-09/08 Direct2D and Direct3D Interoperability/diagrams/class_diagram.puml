@@ -1,0 +1,85 @@
+@startuml 类图
+skinparam defaultFontName "Microsoft YaHei"
+skinparam classAttributeIconSize 0
+
+class D3DApp {
+  # m_pd2dFactory : ID2D1Factory*
+  # m_pd2dRenderTarget : ID2D1RenderTarget*
+  # m_pdwriteFactory : IDWriteFactory*
+  # m_pd3dDevice : ID3D11Device*
+  # m_pd3dImmediateContext : ID3D11DeviceContext*
+  # m_pSwapChain : IDXGISwapChain*
+  + InitDirect2D() : bool
+  + InitDirect3D() : bool
+  + OnResize() : void
+}
+
+class GameApp {
+  - m_pColorBrush : ID2D1SolidColorBrush*
+  - m_pTextFormat : IDWriteTextFormat*
+  - m_pVertexBuffer : ID3D11Buffer*
+  - m_pIndexBuffer : ID3D11Buffer*
+  - m_pConstantBuffers[2] : ID3D11Buffer*
+  - m_VSConstantBuffer : VSConstantBuffer
+  - m_PSConstantBuffer : PSConstantBuffer
+  + Init() : bool
+  + OnResize() : void
+  + UpdateScene(dt : float) : void
+  + DrawScene() : void
+  - InitEffect() : bool
+  - InitResource() : bool
+}
+
+class "ID2D1Factory" as D2DFactory <<interface>> {
+  + CreateDxgiSurfaceRenderTarget() : HRESULT
+}
+
+class "ID2D1RenderTarget" as D2DRenderTarget <<interface>> {
+  + BeginDraw() : void
+  + EndDraw() : HRESULT
+  + DrawTextW() : void
+  + CreateSolidColorBrush() : HRESULT
+}
+
+class "IDWriteFactory" as DWriteFactory <<interface>> {
+  + CreateTextFormat() : HRESULT
+}
+
+class "IDXGISurface" as DXGISurface <<interface>> {
+  + (交换链后台缓冲区的DXGI表面)
+}
+
+D3DApp <|-- GameApp
+
+D3DApp o-- D2DFactory
+D3DApp o-- D2DRenderTarget
+D3DApp o-- DWriteFactory
+
+GameApp ..> DXGISurface : 使用
+
+D2DFactory ..> DXGISurface : 创建渲染目标
+D2DFactory ..> D2DRenderTarget : 创建
+
+DWriteFactory ..> "IDWriteTextFormat" : 创建
+
+note right of D3DApp
+  基类提供：
+  - Direct2D初始化
+  - Direct3D初始化
+  - 共享DXGI资源
+end note
+
+note right of GameApp
+  派生类实现：
+  - 3D场景渲染
+  - 2D文本绘制
+  - 键盘输入处理
+end note
+
+note bottom of DXGISurface
+  关键：交换链后台缓冲区
+  既可以作为D3D渲染目标
+  也可以作为D2D渲染目标
+end note
+
+@enduml

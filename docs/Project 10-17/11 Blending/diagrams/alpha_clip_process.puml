@@ -1,0 +1,71 @@
+@startuml Alpha裁剪处理
+!define DARKBLUE #1E3A5F
+!define LIGHTBLUE #4A90E2
+!define GREEN #2ECC71
+!define ORANGE #E67E22
+!define RED #E74C3C
+
+skinparam defaultFontName Microsoft YaHei
+skinparam activityBackgroundColor LIGHTBLUE
+skinparam activityBorderColor DARKBLUE
+skinparam activityDiamondBackgroundColor ORANGE
+skinparam activityStartColor GREEN
+
+title 像素着色器中的Alpha裁剪(Alpha Clip)
+
+start
+
+:采样纹理;
+
+:获取 texColor.a (Alpha值);
+
+note right
+    **采样结果：**
+    texColor = g_Tex.Sample(g_SamLinear, UV);
+end note
+
+if (texColor.a >= 0.1?) then (是)
+    :继续后续计算;
+    
+    partition "Lighting Calculation" {
+        :标准化法向量;
+        
+        :计算toEye向量;
+        
+        :累加方向光照;
+        
+        :累加点光源;
+        
+        :累加聚光灯;
+        
+        :计算最终颜色 = texColor × (ambient + diffuse) + spec;
+        
+        :设置 Alpha = texColor.a × material.diffuse.a;
+    }
+    
+    :返回最终颜色;
+else (否)
+    :clip()函数丢弃像素;
+    note right
+        **clip(x)行为：**
+        if (x < 0) discard;
+        
+        **优势：**
+        - 提前退出，节省计算
+        - 避免后续光照计算
+        - 不写入渲染目标
+    end note
+    
+    detach
+endif
+
+stop
+
+note left
+    应用场景:
+    篱笆/栅栏纹理
+    树叶/草地纹理
+    带透明区域的UI元素
+end note
+
+@enduml

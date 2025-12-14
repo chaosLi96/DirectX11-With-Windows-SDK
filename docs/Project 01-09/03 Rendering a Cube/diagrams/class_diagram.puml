@@ -1,0 +1,106 @@
+@startuml 类图
+skinparam defaultFontName Microsoft YaHei
+skinparam classAttributeIconSize 0
+
+' 定义颜色方案
+skinparam class {
+    BackgroundColor<<struct>> LightYellow
+    BackgroundColor<<cbuffer>> LightCyan
+    BackgroundColor<<shader>> LightGreen
+    BorderColor Black
+}
+
+' 核心类
+class GameApp {
+    - m_pVertexLayout : ID3D11InputLayout*
+    - m_pVertexBuffer : ID3D11Buffer*
+    - m_pIndexBuffer : ID3D11Buffer*
+    - m_pConstantBuffer : ID3D11Buffer*
+    - m_pVertexShader : ID3D11VertexShader*
+    - m_pPixelShader : ID3D11PixelShader*
+    - m_CBuffer : ConstantBuffer
+    --
+    + Init() : bool
+    + UpdateScene(dt : float) : void
+    + DrawScene() : void
+    - InitEffect() : bool
+    - InitResource() : bool
+}
+
+' 顶点结构
+class VertexPosColor <<struct>> {
+    + pos : XMFLOAT3
+    + color : XMFLOAT4
+    + {static} inputLayout : D3D11_INPUT_ELEMENT_DESC[2]
+}
+
+' 常量缓冲区结构
+class ConstantBuffer <<struct>> {
+    + world : XMMATRIX
+    + view : XMMATRIX
+    + proj : XMMATRIX
+}
+
+' HLSL 常量缓冲区
+class "cbuffer ConstantBuffer" as CBuf <<cbuffer>> {
+    + g_World : matrix
+    + g_View : matrix
+    + g_Proj : matrix
+}
+
+' HLSL 顶点输入
+class VertexIn <<struct>> {
+    + posL : float3
+    + color : float4
+}
+
+' HLSL 顶点输出
+class VertexOut <<struct>> {
+    + posH : float4
+    + color : float4
+}
+
+' 顶点着色器
+class Cube_VS <<shader>> {
+    + VS(vIn : VertexIn) : VertexOut
+    --
+    世界变换 → 观察变换 → 投影变换
+}
+
+' 像素着色器
+class Cube_PS <<shader>> {
+    + PS(pIn : VertexOut) : float4
+    --
+    返回插值后的顶点颜色
+}
+
+' 关系定义
+GameApp *-- VertexPosColor : 使用
+GameApp *-- ConstantBuffer : 包含
+VertexPosColor ..> VertexIn : 对应
+ConstantBuffer ..> CBuf : 传递数据
+CBuf <.. Cube_VS : 读取
+VertexIn <.. Cube_VS : 输入
+Cube_VS ..> VertexOut : 输出
+VertexOut <.. Cube_PS : 输入
+
+note right of GameApp
+  **新增功能**
+  • 索引缓冲区（减少顶点重复）
+  • 常量缓冲区（传递变换矩阵）
+  • 动态更新（旋转动画）
+end note
+
+note right of ConstantBuffer
+  **矩阵存储**
+  C++ 端需要对矩阵进行转置
+  因为 HLSL 默认使用列主矩阵
+end note
+
+note bottom of Cube_VS
+  **变换流程**
+  局部空间 → 世界空间 → 观察空间 → 裁剪空间
+  posH = mul(mul(mul(posL, World), View), Proj)
+end note
+
+@enduml

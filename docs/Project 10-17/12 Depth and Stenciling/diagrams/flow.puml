@@ -1,0 +1,12 @@
+﻿@startuml
+skinparam defaultFontName Microsoft YaHei
+title Chapter 12 Stencil Mirror Rendering
+start
+:Clear RT and DSV;
+:Pass1 Write Stencil=1 to mirror area;
+:Pass2 Draw reflected opaque objects;
+:Pass3 Draw reflected transparent objects;
+:Pass4 Draw normal opaque objects;
+:Pass5 Draw normal transparent objects;
+stop
+@enduml

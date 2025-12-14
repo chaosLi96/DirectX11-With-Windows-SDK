@@ -1,0 +1,41 @@
+@startuml OnResize处理流程
+skinparam defaultFontName "Microsoft YaHei"
+
+start
+
+:窗口大小改变;
+
+partition "释放D2D资源" {
+  :释放颜色画刷\nm_pColorBrush.Reset();
+  :释放D2D渲染目标\nm_pd2dRenderTarget.Reset();
+  note right
+    必须先释放D2D资源
+    才能调整交换链大小
+  end note
+}
+
+:调用基类OnResize()\n调整D3D资源大小;
+
+partition "重建D2D渲染目标" {
+  :从交换链获取DXGI表面\nGetBuffer(0, IDXGISurface);
+  
+  :配置渲染目标属性;
+  
+  :创建DXGI表面渲染目标\nCreateDxgiSurfaceRenderTarget();
+  
+  if (创建成功?) then (是)
+    :创建固定颜色画刷;
+    :创建文本格式;
+  else (E_NOINTERFACE)
+    :输出警告信息;
+    note right
+      Win7系统需要：
+      1. 更新到SP1
+      2. 安装KB2670838补丁
+    end note
+  endif
+}
+
+stop
+
+@enduml

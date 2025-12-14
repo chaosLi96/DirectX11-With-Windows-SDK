@@ -1,0 +1,81 @@
+@startuml 常量缓冲区更新策略
+skinparam backgroundColor #FEFEFE
+skinparam participantBackgroundColor #E3F2FD
+skinparam participantBorderColor #1565C0
+skinparam sequenceArrowColor #1976D2
+skinparam defaultFontName Microsoft YaHei
+
+title 常量缓冲区更新策略
+
+participant "GameApp" as App
+participant "CBChangesEveryDrawing" as CB0
+participant "CBChangesEveryFrame" as CB1
+participant "CBChangesOnResize" as CB2
+participant "CBChangesRarely" as CB3
+
+== 初始化阶段 ==
+
+App -> CB2 : 创建投影矩阵缓冲区
+note right
+    proj = Camera->GetProjXM()
+    窗口大小改变时更新
+end note
+
+App -> CB3 : 创建光照材质缓冲区
+note right
+    dirLight, pointLight, material
+    几乎不变的数据
+end note
+
+App -> CB2 : Map + 更新 + Unmap
+App -> CB3 : Map + 更新 + Unmap
+
+== 每帧更新 ==
+
+loop 每帧
+    App -> CB1 : 更新视图矩阵和眼睛位置
+    note right
+        view = Camera->GetViewXM()
+        eyePos = Camera->GetPositionXM()
+        每帧都可能变化
+    end note
+    
+    App -> CB1 : Map(WRITE_DISCARD) + 更新 + Unmap
+    note right
+        WRITE_DISCARD:
+        丢弃旧数据
+        避免读取冲突
+    end note
+    
+    loop 每个物体
+        App -> CB0 : 更新世界矩阵
+        note right
+            world = GameObject->GetWorldMatrix()
+            worldInvTranspose = InverseTranspose(world)
+            每个Draw Call都要更新
+        end note
+        
+        App -> CB0 : Map(WRITE_DISCARD) + 更新 + Unmap
+        App -> App : DrawIndexed()
+    end
+end
+
+== 窗口大小改变 ==
+
+App -> CB2 : OnResize()
+note right
+    Camera->SetFrustum(fovY, newAspect, nearZ, farZ)
+    proj = Camera->GetProjXM()
+end note
+
+App -> CB2 : Map(WRITE_DISCARD) + 更新 + Unmap
+
+note right of App
+    更新频率分层:
+    CB0: 每个Draw Call
+    CB1: 每帧
+    CB2: 窗口大小改变时
+    CB3: 初始化后几乎不变
+end note
+
+@enduml

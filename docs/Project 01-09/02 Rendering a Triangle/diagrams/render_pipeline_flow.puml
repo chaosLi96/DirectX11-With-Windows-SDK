@@ -1,0 +1,118 @@
+@startuml 渲染管线流程
+!theme cerulean-outline
+skinparam defaultFontName Microsoft YaHei
+skinparam backgroundColor #FEFEFE
+skinparam ActivityBackgroundColor #E3F2FD
+skinparam ActivityBorderColor #1976D2
+
+title 渲染三角形 - 完整渲染管线流程
+
+|应用程序|
+start
+:定义顶点数据\n(位置 + 颜色);
+note right
+  VertexPosColor vertices[] = {
+    { (0.0, 0.5, 0.5), (0,1,0,1) },  // 顶点1: 绿色
+    { (0.5,-0.5, 0.5), (0,0,1,1) },  // 顶点2: 蓝色
+    { (-0.5,-0.5,0.5), (1,0,0,1) }   // 顶点3: 红色
+  };
+end note
+
+:创建顶点缓冲区;
+note right
+  D3D11_BUFFER_DESC
+  - Usage: IMMUTABLE
+  - ByteWidth: sizeof(vertices)
+  - BindFlags: VERTEX_BUFFER
+end note
+
+:编译顶点着色器 (VS);
+note right
+  Triangle_VS.hlsl -> Triangle_VS.cso
+  入口函数: VS
+  着色器模型: vs_5_0
+end note
+
+:创建输入布局;
+note right
+  描述顶点结构：
+  POSITION: float3 (offset 0)
+  COLOR: float4 (offset 12)
+end note
+
+:编译像素着色器 (PS);
+note right
+  Triangle_PS.hlsl -> Triangle_PS.cso
+  入口函数: PS
+  着色器模型: ps_5_0
+end note
+
+|输入装配器 (IA)|
+:绑定顶点缓冲区;
+:设置输入布局;
+:设置图元拓扑\n(TRIANGLELIST);
+note right
+  每3个顶点组成一个三角形
+end note
+
+:读取顶点数据;
+:组装成图元;
+
+|顶点着色器 (VS)|
+repeat :处理顶点;
+  note right
+    输入: float3 pos, float4 color
+    输出: float4 posH, float4 color
+    
+    posH = float4(pos, 1.0)
+    (NDC 坐标空间)
+  end note
+repeat while (所有顶点?) is (否)
+->是;
+
+|光栅化器 (RS)|
+:视口变换;
+note right
+  NDC [-1,1] -> Screen [0, width/height]
+end note
+
+:三角形设置;
+:扫描线转换;
+note right
+  确定哪些像素被三角形覆盖
+end note
+
+:属性插值;
+note right
+  线性插值顶点颜色
+  产生平滑的颜色渐变
+end note
+
+|像素着色器 (PS)|
+repeat :处理像素;
+  note right
+    输入: 插值后的 float4 color
+    输出: float4 最终颜色
+    
+    直接返回 color
+  end note
+repeat while (所有像素?) is (否)
+->是;
+
+|输出合并器 (OM)|
+:深度模板测试;
+:写入渲染目标;
+note right
+  输出到后备缓冲区
+end note
+
+|交换链|
+:Present() 呈现;
+note right
+  交换前后缓冲区
+  显示到屏幕
+end note
+
+stop
+
+@enduml

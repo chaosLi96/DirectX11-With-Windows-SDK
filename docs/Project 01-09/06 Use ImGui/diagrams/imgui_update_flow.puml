@@ -1,0 +1,144 @@
+@startuml ImGui更新和渲染流程
+skinparam defaultFontName Microsoft YaHei
+
+participant "D3DApp\n(基类)" as Base
+participant "GameApp" as App
+participant "ImGui" as ImGui
+participant "ImGui_ImplDX11" as ImGuiBackend
+participant "ID3D11DeviceContext" as Context
+
+== 帧开始 ==
+
+Base -> Base : 计算时间步长 dt
+Base -> ImGuiBackend : ImGui_ImplWin32_NewFrame()
+note right
+  处理Windows消息
+  更新鼠标、键盘状态
+end note
+
+Base -> ImGuiBackend : ImGui_ImplDX11_NewFrame()
+note right
+  准备DirectX11渲染状态
+end note
+
+Base -> ImGui : ImGui::NewFrame()
+note right
+  开始新的ImGui帧
+end note
+
+== 更新阶段 ==
+
+Base -> App : UpdateScene(dt)
+activate App
+
+App -> ImGui : ShowAboutWindow()
+App -> ImGui : ShowDemoWindow()
+App -> ImGui : ShowUserGuide()
+note right
+  显示ImGui内置示例窗口
+end note
+
+App -> ImGui : Begin("Use ImGui")
+activate ImGui
+ImGui --> App : bool (窗口是否打开)
+
+App -> ImGui : Checkbox("Animate Cube", &animateCube)
+note right
+  创建复选框控件
+  直接修改变量值
+end note
+
+App -> ImGui : Button("Reset Params")
+note right : 创建按钮，返回是否被点击
+
+App -> ImGui : SliderFloat("Scale", &scale, 0.2f, 2.0f)
+note right
+  滑块控件
+  实时修改scale值
+end note
+
+App -> ImGui : Text("Phi: %.2f degrees", phi_degrees)
+note right : 显示文本信息
+
+App -> ImGui : ColorEdit3("Color", &m_CBuffer.color)
+note right
+  颜色选择器
+  HSV/RGB切换
+  直接修改颜色值
+end note
+
+App -> ImGui : End()
+deactivate ImGui
+
+App -> ImGui : GetIO()
+ImGui --> App : ImGuiIO& io
+
+alt 没有UI激活
+    App -> ImGui : IsAnyItemActive()
+    ImGui --> App : false
+    
+    App -> ImGui : IsMouseDragging(Left)
+    note right
+      检测鼠标左键拖拽
+    end note
+    
+    alt 左键拖拽
+        App -> App : 更新平移 tx, ty\n基于 io.MouseDelta
+    else 右键拖拽
+        App -> App : 更新旋转 phi, theta\n基于 io.MouseDelta
+    else 滚轮滚动
+        App -> App : 更新缩放 scale\n基于 io.MouseWheel
+    end
+end
+
+App -> App : 计算World矩阵\n(缩放 × 旋转X × 旋转Y × 平移)
+
+App -> App : 计算Proj矩阵\n(透视投影，FOV可调)
+
+App -> Context : Map(m_pConstantBuffer,\nD3D11_MAP_WRITE_DISCARD)
+Context --> App : mappedData.pData
+
+App -> App : memcpy_s(m_CBuffer → GPU)
+
+App -> Context : Unmap(m_pConstantBuffer)
+
+deactivate App
+
+== 绘制阶段 ==
+
+Base -> App : DrawScene()
+activate App
+
+App -> Context : ClearRenderTargetView(black)
+App -> Context : ClearDepthStencilView(1.0f, 0)
+
+App -> Context : DrawIndexed(36, 0, 0)
+note right
+  绘制立方体
+end note
+
+App -> ImGui : Render()
+note right
+  构建ImGui绘制命令列表
+end note
+
+App -> ImGui : GetDrawData()
+ImGui --> App : ImDrawData*
+
+App -> ImGuiBackend : ImGui_ImplDX11_RenderDrawData(drawData)
+activate ImGuiBackend
+note right
+  **渲染ImGui**
+  • 设置渲染状态
+  • 绑定ImGui着色器
+  • 绘制UI元素
+  • 恢复原渲染状态
+end note
+deactivate ImGuiBackend
+
+App -> Context : Present(0, 0)
+note right : 呈现到屏幕
+
+deactivate App
+
+@enduml
